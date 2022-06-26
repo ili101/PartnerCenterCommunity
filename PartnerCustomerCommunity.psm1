@@ -127,6 +127,10 @@ function Get-PartnerCustomer {
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType('Microsoft.Store.PartnerCenter.Models.Customers.Customer')]
     param (
+        # Customer object.
+        [Parameter(ParameterSetName = 'PipeLine', Mandatory, ValueFromPipeLine)]
+        $InputObject,
+
         # Customer tenant ID, if not provided will get all customers.
         [Parameter(ParameterSetName = 'Customer', Mandatory)]
         [String]$CustomerId,
@@ -138,6 +142,9 @@ function Get-PartnerCustomer {
         # PartnerOperations session, if not provided last generated one will be automatically used.
         $PartnerOperations = $Script:PartnerOperations
     )
+    if ($InputObject) {
+        $CustomerId = $InputObject.Id
+    }
     if ($IndirectResellerId) {
         # Create a filter.
         $Filter = [Microsoft.Store.PartnerCenter.Models.Query.SimpleFieldFilter]::new(
