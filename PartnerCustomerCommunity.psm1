@@ -94,9 +94,14 @@ function Get-PartnerOrganizationProfile {
     #>
     [OutputType('Microsoft.Store.PartnerCenter.Models.Partners.OrganizationProfile')]
     param (
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
         # PartnerOperations session, if not provided last generated one will be automatically used.
         $PartnerOperations = $Script:PartnerOperations
     )
+    $Get = $Async ? 'GetAsync' : 'Get'
+
     Return $PartnerOperations.Profiles.OrganizationProfile.$Get()
 }
 
@@ -139,12 +144,17 @@ function Get-PartnerCustomer {
         [Parameter(ParameterSetName = 'IndirectReseller', Mandatory)]
         [String]$IndirectResellerId,
 
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
         # PartnerOperations session, if not provided last generated one will be automatically used.
         $PartnerOperations = $Script:PartnerOperations
     )
+    $Get = $Async ? 'GetAsync' : 'Get'
     if ($InputObject) {
         $CustomerId = $InputObject.Id
     }
+
     if ($IndirectResellerId) {
         # Create a filter.
         $Filter = [Microsoft.Store.PartnerCenter.Models.Query.SimpleFieldFilter]::new(
@@ -171,7 +181,7 @@ function Get-PartnerCustomer {
         }
     }
     elseif ($CustomerId) {
-        $PartnerOperations.Customers.ById($CustomerId).Get()
+        $PartnerOperations.Customers.ById($CustomerId).$Get()
     }
     else {
         $CustomersPage = $PartnerOperations.Customers.Get()
@@ -250,13 +260,18 @@ function Get-PartnerCustomerSubscription {
         # $MpnId
         # $SubscriptionId
 
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
         # PartnerOperations session, if not provided last generated one will be automatically used.
         $PartnerOperations = $Script:PartnerOperations
     )
+    $Get = $Async ? 'GetAsync' : 'Get'
     if ($InputObject) {
         $CustomerId = $InputObject.Id
     }
-    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.Get().Items
+
+    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.$Get().Items
 }
 
 function Get-PartnerIndirectReseller {
@@ -274,11 +289,16 @@ function Get-PartnerIndirectReseller {
         [Parameter(ParameterSetName = 'CustomerId', Mandatory)]
         [string]$CustomerId,
 
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
         # PartnerOperations session, if not provided last generated one will be automatically used.
         $PartnerOperations = $Script:PartnerOperations
     )
+    $Get = $Async ? 'GetAsync' : 'Get'
     if ($InputObject) {
         $CustomerId = $InputObject.Id
     }
-    $PartnerOperations.Customers.ById($CustomerId).Relationships.Get().Items
+
+    $PartnerOperations.Customers.ById($CustomerId).Relationships.$Get().Items
 }
