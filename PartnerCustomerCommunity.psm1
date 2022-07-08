@@ -279,6 +279,7 @@ function Get-PartnerIndirectReseller {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/get-indirect-resellers-of-a-customer#c
     #>
+    [CmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType('Microsoft.Store.PartnerCenter.Models.Relationships.PartnerRelationship')]
     param (
         # Customer object.
@@ -300,5 +301,10 @@ function Get-PartnerIndirectReseller {
         $CustomerId = $InputObject.Id
     }
 
-    $PartnerOperations.Customers.ById($CustomerId).Relationships.$Get().Items
+    if ($CustomerId) {
+        $PartnerOperations.Customers.ById($CustomerId).Relationships.$Get().Items
+    }
+    else {
+        $PartnerOperations.Relationships.$Get([Relationships.PartnerRelationshipType]::IsIndirectCloudSolutionProviderOf).Items
+    }
 }
