@@ -81,7 +81,17 @@ function Connect-PartnerCenter {
     $ApplicationId = $Credential.UserName
     $PartnerCredentials = [Microsoft.Store.PartnerCenter.Extensions.PartnerCredentials]::Instance.GenerateByUserCredentials(
         $ApplicationId,
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], $AccessToken[1])
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], ([DateTimeOffset]::Now.AddSeconds(40))),
+
+        { Write-Host 'In' }
+        <# C#
+        async delegate
+        {
+            // token has expired, re-Login to Azure Active Directory
+            Tuple<string, DateTimeOffset> aadToken = await LoginToPartnerCenter(PartnerId);
+            return new AuthenticationToken(aadToken.Item1, aadToken.Item2);
+        }
+        #>
     )
     $Script:PartnerOperations = [Microsoft.Store.PartnerCenter.PartnerService]::Instance.CreatePartnerOperations($PartnerCredentials)
     Return $Script:PartnerOperations
