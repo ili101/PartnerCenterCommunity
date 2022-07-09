@@ -203,6 +203,8 @@ function Get-PartnerCustomerRestExample {
     <#
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/get-customers-of-an-indirect-reseller#rest-request
+
+        WARNING: This example missing a "paging" retrieval code so it will only return the first page of customers.
     #>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType('Microsoft.Store.PartnerCenter.Models.Customers.Customer')]

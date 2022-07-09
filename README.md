@@ -54,7 +54,7 @@ Help apriciated, open an issue to collaborate🙏
 * Add GitHub Actions testing. We will probably need a "Demo" PartnerCustomer organization for this?
 * Organizing the module better, for example separate functions to different files and so.
 * Documentation.
-* Add usage examples for commune scenarios or even new Cmdlets.
+* Add usage examples for common scenarios or even new Cmdlets.
 
 ## How to contribute
 Open an Issue or make a Pull request.</br>
@@ -68,3 +68,8 @@ OrganizationProfile organizationProfile = partnerOperations.Profiles.Organizatio
 ```pwsh
 $organizationProfile = $PartnerOperations.Profiles.OrganizationProfile.Get()
 ```
+
+## Troubleshooting
+Q: When trying to `Import-Module` you get the error "Add-Type: Assembly with same name is already loaded".</br>
+A: The old PartnerCustomer module is imported in your PS sassoon, the 2 module cannot be imported as PS cannot load 2 different versions of the same dlls.
+Note that if you use VSCode it may import the old module implicitly, to prevent this remove the old module from your module folder and import it manually from another folder if needed.
