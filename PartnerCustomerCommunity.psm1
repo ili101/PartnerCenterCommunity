@@ -59,6 +59,63 @@ function New-PartnerAccessToken {
     Return $ReturnCred.access_token, [DateTimeOffset]::FromUnixTimeSeconds($ReturnCred.expires_on)
 }
 
+function New-PartnerRefreshToken { 
+    <#
+    .SYNOPSIS
+        Uses device code flow to get a refresh token for the Partner Center API
+    .DESCRIPTION
+        Gets a refresh token for the Partner Center API using an auhtorization code (with device code flow) and a second call to get the refresh token.
+    .EXAMPLE
+        New-PartnerRefreshToken -homeTenantID $homeTenantID -ApplicationId $ApplicationId -scope https://api.partnercenter.microsoft.com/user_impersonation 
+        Get a full response for the given scope, using device Auth
+    #>
+    param(
+        # Your CSP/Partner Center tenant ID
+        $homeTenantID,
+        # Your CSP/Partner Center application/Client ID
+        $ApplicationId,
+        # Scope of the refreshtoken. Each endpoint needs its own consented refreshtoken
+        [ValidateSet("https://partner.microsoft.com//.default", 'https://api.partnercenter.microsoft.com/user_impersonation', 'https://outlook.office365.com/.default' )]
+        $scope,
+        [switch]$OnlyRefreshToken
+    )
+
+    $clientBody = @{
+        client_id = $ApplicationId
+        tenant    = $homeTenantID
+        scope     = $scope      
+    }
+
+    $codeRequest = Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$($homeTenantID)/oauth2/v2.0/devicecode" -Body $clientBody -ErrorAction Stop
+    Write-Output "`n$($codeRequest.message)"
+
+    $tokenBody = @{
+        grant_type = "urn:ietf:params:oauth:grant-type:device_code"
+        code       = $codeRequest.device_code
+        client_id  = $ApplicationId
+    }
+
+    # Get OAuth Token
+    while ([string]::IsNullOrEmpty($tokenRequest.access_token)) {
+        $tokenRequest = try {
+            Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$homeTenantID/oauth2/token" -Body $tokenBody -ErrorAction Stop
+        }
+        catch {
+            $errorMessage = $_.ErrorDetails.Message | ConvertFrom-Json
+            # If not waiting for auth, throw error
+            if ($errorMessage.error -ne "authorization_pending") {
+                throw
+            }
+        }
+    }
+    if ($OnlyRefreshToken) {
+        $tokenRequest.refresh_token
+    }
+    else {
+        $tokenRequest
+    }
+}
+
 function Connect-PartnerCenter {
     <#
         .OUTPUTS
