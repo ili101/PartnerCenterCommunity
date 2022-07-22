@@ -87,7 +87,7 @@ function New-PartnerRefreshToken {
     }
 
     $codeRequest = Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$($homeTenantID)/oauth2/v2.0/devicecode" -Body $clientBody -ErrorAction Stop
-    Write-Output "`n$($codeRequest.message)"
+    Write-Verbose "`n$($codeRequest.message)" -Verbose
 
     $tokenBody = @{
         grant_type = "urn:ietf:params:oauth:grant-type:device_code"
