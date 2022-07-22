@@ -75,7 +75,7 @@ function New-PartnerRefreshToken {
         # Your CSP/Partner Center application/Client ID
         $ApplicationId,
         # Scope of the refreshtoken. Each endpoint needs its own consented refreshtoken
-        [ValidateSet("https://partner.microsoft.com//.default", 'https://api.partnercenter.microsoft.com/user_impersonation', 'https://outlook.office365.com/.default' )]
+        [ValidateSet("https://partner.microsoft.com//.default", 'https://api.partnercenter.microsoft.com/user_impersonation', 'https://outlook.office365.com/.default', 'https://management.azure.com/' )]
         $scope,
         [switch]$OnlyRefreshToken
     )
