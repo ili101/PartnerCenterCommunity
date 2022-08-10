@@ -140,7 +140,7 @@ function Get-PartnerCustomer {
         [Parameter(ParameterSetName = 'Customer', Mandatory)]
         [String]$CustomerId,
 
-        # Reseller tenant ID, if not provided filter customers from specific reseller.
+        # Reseller tenant ID, if provided filter customers from specific reseller.
         [Parameter(ParameterSetName = 'IndirectReseller', Mandatory)]
         [String]$IndirectResellerId,
 

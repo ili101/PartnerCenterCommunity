@@ -71,10 +71,10 @@
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     FunctionsToExport = @(
         # Raw REST, will be removed in the future:
-        'New-PartnerAccessToken',
         'Get-PartnerCustomerRestExample',
         'Get-PartnerOrganizationProfileRestExample',
 
+        'New-PartnerAccessToken',
         'Connect-PartnerCenter',
         'Get-PartnerOrganizationProfile',
         'Get-PartnerCustomer',

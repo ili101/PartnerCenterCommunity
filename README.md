@@ -31,14 +31,17 @@ I think that we should go with the PowerShell + dlls approach, it requires only 
 * Currently the functions return the raw response, we can potentially add an `-Output` parameter to all Cmdlets with option like "Raw", "Compatibility", "New" etc.
 
 ## Cmdlets implemented so far
-* `Connect-PartnerCenter` - Currently only support [App + User authentication](https://docs.microsoft.com/en-us/partner-center/develop/partner-center-authentication#app--user-authentication) (not sure if other methods are needed or still supported?).
+* `New-PartnerAccessToken`
+* `Connect-PartnerCenter`
 * `Get-PartnerOrganizationProfile`
 * `Get-PartnerCustomer`
 * `Get-PartnerCustomerSubscription`
 * `Get-PartnerIndirectReseller`
 
+More info [Cmdlet map.md](Cmdlet%20map.md)
+
 #### The following Cmdlets will probably be unexposed later
-* `New-PartnerAccessToken` - Used by `Connect-PartnerCenter` internally, can be used to execute the following 2 "RestExample" Cmdlets.
+Rest example Cmdlets:
 * `Get-PartnerCustomerRestExample` - Rest implementation example.
 * `Get-PartnerOrganizationProfileRestExample` - Rest implementation example.
 
