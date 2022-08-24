@@ -4,10 +4,10 @@ using namespace Microsoft.Store.PartnerCenter.Extensions
 
 # Install-Package -Name 'Microsoft.Store.PartnerCenter' -SkipDependencies -Verbose -Scope CurrentUser
 # Install-Package -Name 'Microsoft.Identity.Client' -SkipDependencies -Verbose -Scope CurrentUser
-# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Identity.Client.4.44.0\lib\netcoreapp2.1\Microsoft.Identity.Client.dll" '.\lib\'
-# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Store.PartnerCenter.3.0.1\lib\netstandard2.0\Microsoft.Store.PartnerCenter.dll" '.\lib\'
-# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Store.PartnerCenter.3.0.1\lib\netstandard2.0\Microsoft.Store.PartnerCenter.Models.dll" '.\lib\'
-# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Store.PartnerCenter.3.0.1\lib\netstandard2.0\Microsoft.Store.PartnerCenter.Extensions.dll" '.\lib\'
+# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Identity.Client.4.46.1\lib\netcoreapp2.1\Microsoft.Identity.Client.dll" '.\lib\'
+# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Store.PartnerCenter.3.1.2\lib\netstandard2.0\Microsoft.Store.PartnerCenter.dll" '.\lib\'
+# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Store.PartnerCenter.3.1.2\lib\netstandard2.0\Microsoft.Store.PartnerCenter.Models.dll" '.\lib\'
+# Copy-Item "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Store.PartnerCenter.3.1.2\lib\netstandard2.0\Microsoft.Store.PartnerCenter.Extensions.dll" '.\lib\'
 Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Identity.Client.dll")
 Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Store.PartnerCenter.dll")
 Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Store.PartnerCenter.Models.dll")
@@ -79,19 +79,85 @@ function Connect-PartnerCenter {
     $AccessToken = New-PartnerAccessToken -Credential $Credential -RefreshToken $RefreshToken -Tenant $Tenant
 
     $ApplicationId = $Credential.UserName
+
+    $RefFolder = Join-Path ( Split-Path ([PSObject].Assembly.Location) ) "ref"
+    $RefAssemblies = Get-ChildItem -Path $RefFolder -Filter "*.dll" | Select-Object -Expand FullName
+    $ExtraAssemblies = [Microsoft.Store.PartnerCenter.AuthenticationToken], [System.Management.Automation.PowerShell]
+    Add-Type -ReferencedAssemblies ($ExtraAssemblies.Assembly.Location + $RefAssemblies) -TypeDefinition @'
+using System;
+using System.Threading.Tasks;
+using System.Management.Automation;
+using System.Management.Automation.Host;
+using Microsoft.Store.PartnerCenter;
+
+namespace DelegateHelper
+{
+    public class ScriptBlockDelegate
+    {
+        public PSHost Host { get; set; }
+        public ScriptBlock Code { get; set; }
+        public PSCredential Credential { get; set; }
+        public String RefreshToken { get; set; }
+        public String Tenant { get; set; }
+        public ScriptBlock Function { get; set; }
+
+        public ScriptBlockDelegate(PSHost host, ScriptBlock code, PSCredential credential, String refreshToken, String tenant, ScriptBlock function)
+        {
+            Host = host;
+            Code = code;
+            Credential = credential;
+            RefreshToken = refreshToken;
+            Tenant = tenant;
+            Function = function;
+        }
+        public Task<AuthenticationToken> Delegate(AuthenticationToken expiredAuthenticationToken)
+        {
+            using (PowerShell ps = PowerShell.Create())
+            {
+                ps.AddScript(Code.ToString());
+                ps.AddArgument(expiredAuthenticationToken).AddArgument(Credential).AddArgument(RefreshToken).AddArgument(Tenant).AddArgument(Function);
+                AuthenticationToken newAuthenticationToken = ps.Invoke<AuthenticationToken>(
+                    null,
+                    new PSInvocationSettings()
+                    {
+                        Host = Host,
+                    }
+                )[0];
+                return Task<AuthenticationToken>.Run(() =>
+                {
+                    return newAuthenticationToken;
+                });
+            }
+        }
+    }
+}
+'@
+    $Callback = {
+        param (
+            [Microsoft.Store.PartnerCenter.AuthenticationToken]$ExpiredAuthenticationToken,
+
+            [Parameter(Mandatory)]
+            [PSCredential]$Credential,
+
+            [Parameter(Mandatory)]
+            [String]$RefreshToken,
+
+            [string]$Tenant,
+
+            [Parameter(Mandatory)]
+            [ScriptBlock]$Function
+        )
+        $AccessToken = $Function.Invoke($Credential, $RefreshToken, $Tenant)
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], $AccessToken[1])
+    }
+    $Delegate = [DelegateHelper.ScriptBlockDelegate]::new($host, $Callback, $Credential, $RefreshToken, $Tenant, ${function:New-PartnerAccessToken})
+    $TokenRefresher = $Delegate.Delegate
+
     $PartnerCredentials = [Microsoft.Store.PartnerCenter.Extensions.PartnerCredentials]::Instance.GenerateByUserCredentials(
         $ApplicationId,
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], ([DateTimeOffset]::Now.AddSeconds(40))),
-
-        { Write-Host 'In' }
-        <# C#
-        async delegate
-        {
-            // token has expired, re-Login to Azure Active Directory
-            Tuple<string, DateTimeOffset> aadToken = await LoginToPartnerCenter(PartnerId);
-            return new AuthenticationToken(aadToken.Item1, aadToken.Item2);
-        }
-        #>
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], $AccessToken[1]),
+        $TokenRefresher,
+        $null
     )
     $Script:PartnerOperations = [Microsoft.Store.PartnerCenter.PartnerService]::Instance.CreatePartnerOperations($PartnerCredentials)
     Return $Script:PartnerOperations
