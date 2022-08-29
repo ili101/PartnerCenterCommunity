@@ -54,7 +54,12 @@
     # RequiredModules = @()
 
     # Assemblies that must be loaded prior to importing this module
-    # RequiredAssemblies = @()
+    RequiredAssemblies = @(
+        '.\lib\Microsoft.Identity.Client.dll',
+        '.\lib\Microsoft.Store.PartnerCenter.dll',
+        '.\lib\Microsoft.Store.PartnerCenter.Models.dll',
+        '.\lib\Microsoft.Store.PartnerCenter.Extensions.dll'
+    )
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
     # ScriptsToProcess = @()
