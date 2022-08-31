@@ -13,7 +13,7 @@ using namespace Microsoft.Store.PartnerCenter.Extensions
 # Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Store.PartnerCenter.Models.dll")
 # Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Store.PartnerCenter.Extensions.dll")
 
-if (!(Get-Module -Name 'PSRunspacedDelegate') -and !([System.Management.Automation.PSTypeName]'PowerShell.RunspacedDelegateFactory').Type) {
+if (!(Get-Module -Name 'PSRunspacedDelegate')) {
     Import-Module -Name "$PSScriptRoot\PSRunspacedDelegate"
 }
 $ErrorActionPreference = 'Stop'
@@ -158,7 +158,7 @@ function Connect-PartnerCenter {
         [String]$RefreshToken,
 
         # Limit to specific tenant.
-        [string]$Tenant
+        [string]$Tenant = 'common'
     )
     $AccessToken = New-PartnerAccessToken -Credential $Credential -RefreshToken $RefreshToken -Tenant $Tenant
 

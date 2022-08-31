@@ -65,8 +65,8 @@ Help appreciated, open an issue to collaborate🙏
 * Probably more stuff im missing 😅.
 #### Optional
 * Add `-Output` parameter to Cmdlets.
-* Add App creation and App token refresh code if there is intrust? (code exist but need to be updated and cleaned as it uses deprecated MS modules).
-* Add `New-PartnerRefreshToken -Flow 'OIDC'` using "Pode"
+* Add App creation if there is interest? (code exist but need to be updated and cleaned as it uses deprecated MS modules).
+* Add `New-PartnerRefreshToken -Flow 'OIDC'` using "Pode".
 * Add GitHub Actions testing. We will probably need a "Demo" PartnerCustomer organization for this?
 * Organizing the module better, for example separate functions to different files and so.
 * Documentation.
