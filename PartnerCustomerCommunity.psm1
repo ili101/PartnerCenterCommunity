@@ -13,9 +13,10 @@ using namespace Microsoft.Store.PartnerCenter.Extensions
 # Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Store.PartnerCenter.Models.dll")
 # Add-Type -Path (Resolve-Path -Path "$PSScriptRoot\lib\Microsoft.Store.PartnerCenter.Extensions.dll")
 
-if (!(Get-Module -Name 'PSRunspacedDelegate')) {
+if (!(Get-Module -Name 'PSRunspacedDelegate') -and !([System.Management.Automation.PSTypeName]'PowerShell.RunspacedDelegateFactory').Type) {
     Import-Module -Name "$PSScriptRoot\PSRunspacedDelegate"
 }
+$ErrorActionPreference = 'Stop'
 
 function New-PartnerAccessToken {
     <#
@@ -24,6 +25,7 @@ function New-PartnerAccessToken {
         [DateTimeOffset] Temporary token expiration time.
 
         .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model#get-access-token
         https://www.powershellgallery.com/packages/PartnerCenterLW/1.1
     #>
     param (
@@ -36,7 +38,7 @@ function New-PartnerAccessToken {
         [String]$RefreshToken,
 
         # Limit to specific tenant.
-        [string]$Tenant
+        [string]$Tenant = 'common'
     )
 
     $AuthBody = @{
@@ -45,18 +47,96 @@ function New-PartnerAccessToken {
         grant_type    = "refresh_token"
         client_secret = $Credential.GetNetworkCredential().Password
     }
-
-    if ($Tenant) {
-        $Uri = "https://login.microsoftonline.com/$Tenant/oauth2/token"
-    }
-    else {
-        $Uri = "https://login.microsoftonline.com/common/oauth2/token"
-    }
+    $Uri = "https://login.microsoftonline.com/$Tenant/oauth2/token"
 
     $ReturnCred = Invoke-RestMethod -Uri $Uri -ContentType "application/x-www-form-urlencoded" -Method POST -Body $AuthBody -ErrorAction Stop
 
     # Return [Tuple[string, DateTimeOffset]]::new($ReturnCred.access_token, [DateTime]::UtcNow + [TimeSpan]::FromSeconds($ReturnCred.expires_in))
     Return $ReturnCred.access_token, [DateTimeOffset]::FromUnixTimeSeconds($ReturnCred.expires_on)
+}
+
+function New-PartnerRefreshToken {
+    <#
+        .SYNOPSIS
+        Uses device code flow to get a refresh token for the Partner Center API.
+
+        .DESCRIPTION
+        Gets a refresh token for the Partner Center API using an authorization code (with device code flow) and a second call to get the refresh token.
+
+        .EXAMPLE
+        New-PartnerRefreshToken -Tenant $TenantID -ApplicationId $ApplicationId
+
+        .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
+    #>
+    param(
+        # Limit to specific tenant.
+        [string]$Tenant = 'common',
+
+        # Your CSP/Partner Center application/Client ID.
+        [Parameter(Mandatory)]
+        [string]$ApplicationId,
+
+        # Scope of the RefreshToken. Each endpoint needs its own consented RefreshToken.
+        [ArgumentCompleter({
+                'user.read', 'openid', 'profile',
+                'https://api.partnercenter.microsoft.com/user_impersonation',
+                'https://outlook.office365.com/.default'
+            })]
+        [string[]]$Scopes = @('https://api.partnercenter.microsoft.com/user_impersonation'),
+
+        # Authorization grant flow.
+        # https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
+        [ValidateSet('OIDC', 'DeviceCode')]
+        [string]$Flow = 'DeviceCode',
+
+        # Return only the RefreshToken.
+        [switch]$OnlyRefreshToken
+    )
+
+    $CodeBody = @{
+        client_id = $ApplicationId
+        scope     = $Scopes -join ' '
+    }
+
+    if ($Flow -eq 'DeviceCode') {
+        # Get the authorization code.
+        $AuthorizationCodeResponse = Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$Tenant/oauth2/v2.0/devicecode" -Body $CodeBody
+        Write-Warning $AuthorizationCodeResponse.message
+
+        # Get the RefreshToken.
+        $RefreshTokenBody = @{
+            grant_type = 'urn:ietf:params:oauth:grant-type:device_code'
+            code       = $AuthorizationCodeResponse.device_code
+            client_id  = $ApplicationId
+        }
+        while ([string]::IsNullOrEmpty($RefreshTokenResponse.access_token)) {
+            Start-Sleep -Seconds 5
+            $RefreshTokenResponse = try {
+                Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$Tenant/oauth2/token" -Body $RefreshTokenBody
+            }
+            catch {
+                $ErrorMessage = $_.ErrorDetails.Message | ConvertFrom-Json
+                # If not waiting for auth, throw error
+                if ($ErrorMessage.error -ne "authorization_pending") {
+                    if ($ErrorMessage.error_description -like '*AADSTS7000218*') {
+                        throw ('"-Flow DeviceCode" requires "Allow public client flows" in Azure Portal -> "App registrations" -> "Authentication". Original Error:' + [Environment]::NewLine + $_.ErrorDetails.Message)
+                    }
+                    throw $_
+                }
+            }
+        }
+    }
+    elseif ($Flow -eq 'OIDC') {
+        throw '"-Flow OIDC" is not supported yet.'
+    }
+
+    if ($OnlyRefreshToken) {
+        $RefreshTokenResponse.refresh_token
+    }
+    else {
+        $RefreshTokenResponse
+    }
 }
 
 function Connect-PartnerCenter {

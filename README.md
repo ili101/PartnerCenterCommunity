@@ -45,8 +45,20 @@ Rest example Cmdlets:
 * `Get-PartnerCustomerRestExample` - Rest implementation example.
 * `Get-PartnerOrganizationProfileRestExample` - Rest implementation example.
 
+## Authentication
+https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
+#### Create a web app (admin user -> web app)
+Not implemented yet, if you don't have a web app already, do manually or use ["The Script" from here](https://www.cyberdrain.com/connect-to-exchange-online-automated-when-mfa-is-enabled-using-the-secureapp-model/).
+#### Get an authorization code (web app -> authorization code)
+#### Get a refresh token (authorization code -> refresh token)
+To achieve those 2 steps you can run `New-PartnerRefreshToken`.
+#### Get an access token (refresh token -> access token).
+Use `Connect-PartnerCenter`.
+#### Make a Partner Center API call
+Just run any of the CmdLets, `Connect-PartnerCenter` holds the session credentials in the module scope.
+
 ## ToDo
-Help apriciated, open an issue to collaborate🙏
+Help appreciated, open an issue to collaborate🙏
 #### Prioritized
 * Find how to refresh the token, currently it will expire after 3 hours and it's needed to run `Connect-PartnerCenter` again.
 * Implement more Cmdlets from the PartnerCenter module.
@@ -54,6 +66,7 @@ Help apriciated, open an issue to collaborate🙏
 #### Optional
 * Add `-Output` parameter to Cmdlets.
 * Add App creation and App token refresh code if there is intrust? (code exist but need to be updated and cleaned as it uses deprecated MS modules).
+* Add `New-PartnerRefreshToken -Flow 'OIDC'` using "Pode"
 * Add GitHub Actions testing. We will probably need a "Demo" PartnerCustomer organization for this?
 * Organizing the module better, for example separate functions to different files and so.
 * Documentation.

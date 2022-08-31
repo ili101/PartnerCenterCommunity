@@ -68,24 +68,26 @@ New-PartnerAccessToken -Credential <App PSCredential> -RefreshToken <String> [-T
 | UseAuthorizationCode    | ❌     |
 | UseDeviceAuthentication | ❌     |
 
-### New-PartnerRefreshToken (`New-PartnerAccessToken` Web app to Refresh token)
+### New-PartnerRefreshToken (`New-PartnerAccessToken` web app to Refresh token)
 ``` pwsh
 # Old
-
+$Token = New-PartnerAccessToken -ApplicationId <String> -Scopes 'https://api.partnercenter.microsoft.com/user_impersonation' [-Tenant <String>] -UseDeviceAuthentication
 # New
-
+$Token = New-PartnerRefreshToken -ApplicationId <String> [-Scopes <String<>>] [-Tenant <String>] -Flow DeviceCode
 ```
-| Param                   | Status |
-| ----------------------- | ------ |
-| Credential              | ❌     |
-| RefreshToken            | ❌     |
-| Tenant                  | ❌     |
-| AccessToken             | ❌     |
-| ApplicationId           | ❌     |
-| CertificateThumbprint   | ❌     |
-| Environment             | ❌     |
-| Module                  | ❌     |
-| Scopes                  | ❌     |
-| ServicePrincipal        | ❌     |
-| UseAuthorizationCode    | ❌     |
-| UseDeviceAuthentication | ❌     |
+| Param                   | Status                                |
+| ----------------------- | ------------------------------------- |
+| Credential              | ❌                                    |
+| RefreshToken            | ❌                                    |
+| Tenant                  | ✔️                                  |
+| AccessToken             | ❌                                    |
+| ApplicationId           | ✔️                                  |
+| CertificateThumbprint   | ❌                                    |
+| Environment             | ❌                                    |
+| Module                  | ❌                                    |
+| Scopes                  | ✔️ Optional                         |
+| ServicePrincipal        | ❌                                    |
+| UseAuthorizationCode    | ❌ will be replaced by  `-Flow OIDC`. |
+| UseDeviceAuthentication | ❌ replaced by `-Flow DeviceCode`.    |
+| Flow                    | 🆕                                    |
+| OnlyRefreshToken        | 🆕 Return only the RefreshToken.      |
