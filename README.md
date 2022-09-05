@@ -14,6 +14,7 @@ Make it easy and inviting to anyone that wants to contribute by fixing or adding
 * Now switch `Get-PartnerCustomer -IndirectResellerId <GUID>`.
 * Get Cmdlets output usually have more data.
 * Optional async support to support faster parallel execution.
+* `New-PartnerWebApp`.
 
 ## Design choices
 #### Language
@@ -31,6 +32,8 @@ I think that we should go with the PowerShell + dlls approach, it requires only 
 * Currently the functions return the raw response, we can potentially add an `-Output` parameter to all Cmdlets with option like "Raw", "Compatibility", "New" etc.
 
 ## Cmdlets implemented so far
+* `New-PartnerWebApp`
+* `New-PartnerRefreshToken`
 * `New-PartnerAccessToken`
 * `Connect-PartnerCenter`
 * `Get-PartnerOrganizationProfile`
@@ -46,26 +49,31 @@ Rest example Cmdlets:
 * `Get-PartnerOrganizationProfileRestExample` - Rest implementation example.
 
 ## Authentication
-https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
+Implements the authentication flow https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
+
+### General steps
 #### Create a web app (admin user -> web app)
-Not implemented yet, if you don't have a web app already, do manually or use ["The Script" from here](https://www.cyberdrain.com/connect-to-exchange-online-automated-when-mfa-is-enabled-using-the-secureapp-model/).
+New CmdLet using [Microsoft.Graph](https://github.com/microsoftgraph/msgraph-sdk-powershell) `New-PartnerWebApp`.
 #### Get an authorization code (web app -> authorization code)
 #### Get a refresh token (authorization code -> refresh token)
 To achieve those 2 steps you can run `New-PartnerRefreshToken`.
 #### Get an access token (refresh token -> access token).
-Use `Connect-PartnerCenter`.
+Connecting will do this automatically `Connect-PartnerCenter`.
 #### Make a Partner Center API call
 Just run any of the CmdLets, `Connect-PartnerCenter` holds the session credentials in the module scope.
+
+### Example
+Example [Examples\Authentication.ps1](Examples\Authentication.ps1)
 
 ## ToDo
 Help appreciated, open an issue to collaborate🙏
 #### Prioritized
-* Find how to refresh the token, currently it will expire after 3 hours and it's needed to run `Connect-PartnerCenter` again.
+* ~~Find how to refresh the token, currently it will expire after 3 hours and it's needed to run `Connect-PartnerCenter` again.~~ Added but need more work.
 * Implement more Cmdlets from the PartnerCenter module.
 * Probably more stuff im missing 😅.
 #### Optional
 * Add `-Output` parameter to Cmdlets.
-* Add App creation if there is interest? (code exist but need to be updated and cleaned as it uses deprecated MS modules).
+* ~~Add App creation if there is interest? (code exist but need to be updated and cleaned as it uses deprecated MS modules).~~ Added need to fix Microsoft.Graph conflict?
 * Add `New-PartnerRefreshToken -Flow 'OIDC'` using "Pode".
 * Add GitHub Actions testing. We will probably need a "Demo" PartnerCustomer organization for this?
 * Organizing the module better, for example separate functions to different files and so.

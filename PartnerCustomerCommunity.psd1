@@ -79,6 +79,7 @@
         'Get-PartnerCustomerRestExample',
         'Get-PartnerOrganizationProfileRestExample',
 
+        'New-PartnerWebApp',
         'New-PartnerRefreshToken',
         'New-PartnerAccessToken',
         'Connect-PartnerCenter',

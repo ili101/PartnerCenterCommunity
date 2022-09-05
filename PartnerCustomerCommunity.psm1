@@ -38,8 +38,14 @@ function New-PartnerAccessToken {
         [String]$RefreshToken,
 
         # Limit to specific tenant.
-        [string]$Tenant = 'common'
+        [string]$Tenant = 'common',
+
+        [ValidateSet('Raw', 'Minimal')]
+        [string]$OutputFormat = 'Minimal'
     )
+    if (!$Tenant) {
+        $Tenant = 'common'
+    }
 
     $AuthBody = @{
         client_id     = $Credential.UserName
@@ -51,8 +57,16 @@ function New-PartnerAccessToken {
 
     $ReturnCred = Invoke-RestMethod -Uri $Uri -ContentType "application/x-www-form-urlencoded" -Method POST -Body $AuthBody -ErrorAction Stop
 
-    # Return [Tuple[string, DateTimeOffset]]::new($ReturnCred.access_token, [DateTime]::UtcNow + [TimeSpan]::FromSeconds($ReturnCred.expires_in))
-    Return $ReturnCred.access_token, [DateTimeOffset]::FromUnixTimeSeconds($ReturnCred.expires_on)
+    if ($OutputFormat -eq 'Raw') {
+        $ReturnCred
+    }
+    elseif ($OutputFormat -eq 'Minimal') {
+        [PSCustomObject][ordered]@{
+            AccessTokenExpiration = [DateTimeOffset]::FromUnixTimeSeconds($ReturnCred.expires_on).LocalDateTime
+            AccessToken           = $ReturnCred.access_token
+            RefreshToken          = $ReturnCred.refresh_token
+        }
+    }
 }
 
 function New-PartnerRefreshToken {
@@ -64,7 +78,7 @@ function New-PartnerRefreshToken {
         Gets a refresh token for the Partner Center API using an authorization code (with device code flow) and a second call to get the refresh token.
 
         .EXAMPLE
-        New-PartnerRefreshToken -Tenant $TenantID -ApplicationId $ApplicationId
+        New-PartnerRefreshToken -Tenant $Tenant -ApplicationId $ApplicationId
 
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
@@ -88,18 +102,21 @@ function New-PartnerRefreshToken {
         # Authorization grant flow.
         # https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
         [ValidateSet('OIDC', 'DeviceCode')]
-        [string]$Flow = 'DeviceCode',
+        [string]$AuthenticationFlow = 'DeviceCode',
 
-        # Return only the RefreshToken.
-        [switch]$OnlyRefreshToken
+        [ValidateSet('Raw', 'OnlyRefreshToken')]
+        [string]$OutputFormat = 'OnlyRefreshToken'
     )
+    if (!$Tenant) {
+        $Tenant = 'common'
+    }
 
     $CodeBody = @{
         client_id = $ApplicationId
         scope     = $Scopes -join ' '
     }
 
-    if ($Flow -eq 'DeviceCode') {
+    if ($AuthenticationFlow -eq 'DeviceCode') {
         # Get the authorization code.
         $AuthorizationCodeResponse = Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$Tenant/oauth2/v2.0/devicecode" -Body $CodeBody
         Write-Warning $AuthorizationCodeResponse.message
@@ -127,15 +144,158 @@ function New-PartnerRefreshToken {
             }
         }
     }
-    elseif ($Flow -eq 'OIDC') {
+    elseif ($AuthenticationFlow -eq 'OIDC') {
         throw '"-Flow OIDC" is not supported yet.'
     }
 
-    if ($OnlyRefreshToken) {
+    if ($OutputFormat -eq 'Raw') {
+        $RefreshTokenResponse
+    }
+    elseif ($OutputFormat -eq 'OnlyRefreshToken') {
         $RefreshTokenResponse.refresh_token
     }
-    else {
-        $RefreshTokenResponse
+}
+
+function New-PartnerWebApp {
+    <#
+        .SYNOPSIS
+        Creates a new Azure web app for Partner Center.
+
+        .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model#create-a-web-app
+        Updated version of https://www.cyberdrain.com/connect-to-exchange-online-automated-when-mfa-is-enabled-using-the-secureapp-model/
+    #>
+    param(
+        # Limit to specific tenant.
+        [string]$Tenant,
+
+        [Parameter(Mandatory)]
+        [string]$DisplayName,
+
+        # Authorization grant flow.
+        # https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
+        [ValidateSet('OIDC', 'DeviceCode')]
+        [string]$AuthenticationFlow = 'OIDC',
+
+        # Use this if you need the WebApp to support `New-PartnerRefreshToken -AuthenticationFlow DeviceCode`
+        [switch]$IsFallbackPublicClient,
+
+        # Stay connected to MgGraph.
+        [switch]$StayConnected,
+
+        [ValidateSet('Raw', 'Minimal')]
+        [string]$OutputFormat = 'Minimal'
+    )
+
+    # Check if the Azure AD PowerShell module has already been loaded.
+    $Modules = 'Microsoft.Graph.Authentication', 'Microsoft.Graph.Applications', 'Microsoft.Graph.Groups'
+    $ModulesToImport = @()
+    $ModulesToInstall = @()
+    foreach ($Module in $Modules) {
+        if (!(Get-Module -Name $Module)) {
+            # Check if the Azure AD PowerShell module is installed.
+            if (Get-Module -Name $Module -ListAvailable) {
+                # The Azure AD PowerShell module is not load and it is installed. This module # must be loaded for other operations performed by this script.
+                $ModulesToImport += $Module
+            }
+            else {
+                $ModulesToInstall += $Module
+            }
+        }
+    }
+    if ($ModulesToImport) {
+        Write-Host -ForegroundColor Green "Loading the $ModulesToImport PowerShell modules..."
+        Import-Module $ModulesToImport
+    }
+    elseif ($ModulesToInstall) {
+        Write-Host -ForegroundColor Green "Installing the $ModulesToInstall PowerShell modules..."
+        Install-Module $ModulesToInstall
+    }
+
+    $MgGraphParams = @{ Scopes = 'Application.ReadWrite.All', 'User.Read', 'Group.Read.All', 'GroupMember.ReadWrite.All' }
+    if ($AuthenticationFlow -eq 'DeviceCode') {
+        $MgGraphParams['UseDeviceAuthentication'] = $true
+    }
+    if ($Tenant) {
+        $MgGraphParams['TenantId'] = $Tenant
+    }
+    Write-Host -ForegroundColor Green "When prompted please enter the appropriate credentials... Warning: Window might have pop-under in VSCode"
+    $null = Connect-MgGraph @MgGraphParams
+
+    $AdAppAccess = @{
+        ResourceAppId  = "00000002-0000-0000-c000-000000000000";
+        ResourceAccess = @(
+            @{
+                Id   = "5778995a-e1bf-45b8-affa-663a9f3f4d04";
+                Type = "Role"
+            },
+            @{
+                Id   = "a42657d6-7f20-40e3-b6f0-cee03008a62a";
+                Type = "Scope"
+            },
+            @{
+                Id   = "311a71cc-e848-46a1-bdf8-97ff7156d8e6";
+                Type = "Scope"
+            }
+        )
+    }
+
+    $GraphAppAccess = @{
+        ResourceAppId  = "00000003-0000-0000-c000-000000000000";
+        ResourceAccess = @(
+            @{
+                Id   = "bf394140-e372-4bf9-a898-299cfc7564e5";
+                Type = "Role"
+            },
+            @{
+                Id   = "7ab1d382-f21e-4acd-a863-ba3e13f7da61";
+                Type = "Role"
+            }
+        )
+    }
+
+    $PartnerCenterAppAccess = @{
+        ResourceAppId  = "fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd";
+        ResourceAccess = @(
+            @{
+                Id   = "1cebfa2a-fb4d-419e-b5f9-839b4383e05a";
+                Type = "Scope"
+            }
+        )
+    }
+
+    Write-Host -ForegroundColor Green "Creating the Azure AD application and related resources..."
+    $Application = New-MgApplication -DisplayName $DisplayName -RequiredResourceAccess ($AdAppAccess, $GraphAppAccess, $PartnerCenterAppAccess) -IsFallbackPublicClient:$IsFallbackPublicClient -SignInAudience 'AzureADMultipleOrgs' -Web @{
+        RedirectUris = @("urn:ietf:wg:oauth:2.0:oob", "https://login.microsoftonline.com/organizations/oauth2/nativeclient", "https://localhost", "http://localhost", "http://localhost:8400")
+    }
+
+    $ApplicationPassword = Add-MgApplicationPassword -ApplicationId $Application.Id
+
+    $ServicePrincipal = New-MgServicePrincipal -AppId $Application.AppId -DisplayName $DisplayName
+    $AdminAgentsGroup = Get-MgGroup -Filter "DisplayName eq 'AdminAgents'"
+    $null = $ServicePrincipal | New-MgGroupMember -GroupId $AdminAgentsGroup.Id
+
+    if (!$StayConnected) {
+        Write-Host "Disconnecting from Microsoft Graph"
+        $null = Disconnect-MgGraph
+    }
+
+    if ($OutputFormat -eq 'Raw') {
+        [PSCustomObject][ordered]@{
+            ApplicationPassword = $ApplicationPassword
+            Application         = $Application
+        }
+    }
+    elseif ($OutputFormat -eq 'Minimal') {
+        $SecretSecureString = $ApplicationPassword.SecretText | ConvertTo-SecureString -AsPlainText -Force
+        $Output = [ordered]@{
+            Credential       = [System.Management.Automation.PSCredential]::new($Application.AppId, $SecretSecureString)
+            SecretExpiration = $ApplicationPassword.EndDateTime
+        }
+        if ($Tenant) {
+            $Output['Tenant'] = $Tenant
+        }
+        [PSCustomObject]$Output
     }
 }
 
@@ -160,6 +320,10 @@ function Connect-PartnerCenter {
         # Limit to specific tenant.
         [string]$Tenant = 'common'
     )
+    if (!$Tenant) {
+        $Tenant = 'common'
+    }
+
     $AccessToken = New-PartnerAccessToken -Credential $Credential -RefreshToken $RefreshToken -Tenant $Tenant
 
     $ApplicationId = $Credential.UserName
@@ -180,14 +344,14 @@ function Connect-PartnerCenter {
             [Microsoft.Store.PartnerCenter.AuthenticationToken]$ExpiredAuthenticationToken
         )
         $AccessToken = New-PartnerAccessToken -Credential $Credential -RefreshToken $RefreshToken -Tenant $Tenant
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], $AccessToken[1])
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration)
     }.GetNewClosure()
     $Delegate = [ScriptBlockDelegate]::new($Callback)
     $TokenRefresher = $Delegate.Delegate
 
     $PartnerCredentials = [Microsoft.Store.PartnerCenter.Extensions.PartnerCredentials]::Instance.GenerateByUserCredentials(
         $ApplicationId,
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken[0], $AccessToken[1]),
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration),
         $TokenRefresher,
         $null
     )
