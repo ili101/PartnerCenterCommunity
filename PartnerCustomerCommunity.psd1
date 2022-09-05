@@ -9,28 +9,31 @@
 @{
 
     # Script module or binary module file associated with this manifest.
-    RootModule        = 'PartnerCustomerCommunity.psm1'
+    RootModule         = 'PartnerCustomerCommunity.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.0.1'
+    ModuleVersion      = '0.0.1'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
 
     # ID used to uniquely identify this module
-    GUID              = 'b46e82a0-53ea-4efc-8c8e-9821edfcccc4'
+    GUID               = 'b46e82a0-53ea-4efc-8c8e-9821edfcccc4'
 
     # Author of this module
-    Author            = 'ili'
+    Author             = 'ili'
 
     # Company or vendor of this module
-    CompanyName       = 'Unknown'
+    # CompanyName       = 'Unknown'
 
     # Copyright statement for this module
-    Copyright         = '(c) ili. All rights reserved.'
+    Copyright          = '(c) ili. All rights reserved.'
 
     # Description of the functionality provided by this module
-    # Description = ''
+    Description        = @'
+This is an open source Powershell module for Microsoft Partner Center.
+https://github.com/ili101/PartnerCustomerCommunity/blob/master/README.md
+'@
 
     # Minimum version of the PowerShell engine required by this module
     # PowerShellVersion = ''
@@ -74,7 +77,7 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = @(
+    FunctionsToExport  = @(
         # Raw REST, will be removed in the future:
         'Get-PartnerCustomerRestExample',
         'Get-PartnerOrganizationProfileRestExample',
@@ -91,13 +94,13 @@
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-    CmdletsToExport   = @()
+    CmdletsToExport    = @()
 
     # Variables to export from this module
-    VariablesToExport = '*'
+    VariablesToExport  = '*'
 
     # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-    AliasesToExport   = @()
+    AliasesToExport    = @()
 
     # DSC resources to export from this module
     # DscResourcesToExport = @()
@@ -109,27 +112,27 @@
     # FileList = @()
 
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-    PrivateData       = @{
+    PrivateData        = @{
 
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            # Tags = @()
+            Tags       = @('CSP', 'NCE', 'PartnerCenter', 'Azure', 'Office365')
 
             # A URL to the license for this module.
             # LicenseUri = ''
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://github.com/ili101/PartnerCustomerCommunity'
 
             # A URL to an icon representing this module.
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = 'https://github.com/ili101/PartnerCustomerCommunity/blob/master/CHANGELOG.md'
 
             # Prerelease string of this module
-            # Prerelease = ''
+            Prerelease = 'alpha'
 
             # Flag to indicate whether the module requires explicit user acceptance for install/update/save
             # RequireLicenseAcceptance = $false

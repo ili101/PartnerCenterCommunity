@@ -67,6 +67,7 @@ New-PartnerAccessToken -Credential <App PSCredential> -RefreshToken <String> [-T
 | ServicePrincipal        | ❌     |
 | UseAuthorizationCode    | ❌     |
 | UseDeviceAuthentication | ❌     |
+| OutputFormat            | 🆕     |
 
 ### New-PartnerRefreshToken (`New-PartnerAccessToken` web app to Refresh token)
 ``` pwsh
@@ -75,19 +76,19 @@ $Token = New-PartnerAccessToken -ApplicationId <String> -Scopes 'https://api.par
 # New
 $Token = New-PartnerRefreshToken -ApplicationId <String> [-Scopes <String<>>] [-Tenant <String>] -Flow DeviceCode
 ```
-| Param                   | Status                                |
-| ----------------------- | ------------------------------------- |
-| Credential              | ❌                                    |
-| RefreshToken            | ❌                                    |
-| Tenant                  | ✔️                                  |
-| AccessToken             | ❌                                    |
-| ApplicationId           | ✔️                                  |
-| CertificateThumbprint   | ❌                                    |
-| Environment             | ❌                                    |
-| Module                  | ❌                                    |
-| Scopes                  | ✔️ Optional                         |
-| ServicePrincipal        | ❌                                    |
-| UseAuthorizationCode    | ❌ will be replaced by  `-Flow OIDC`. |
-| UseDeviceAuthentication | ❌ replaced by `-Flow DeviceCode`.    |
-| Flow                    | 🆕                                    |
-| OnlyRefreshToken        | 🆕 Return only the RefreshToken.      |
+| Param                   | Status                                              |
+| ----------------------- | --------------------------------------------------- |
+| Credential              | ❌                                                  |
+| RefreshToken            | ❌                                                  |
+| Tenant                  | ✔️                                                |
+| AccessToken             | ❌                                                  |
+| ApplicationId           | ✔️                                                |
+| CertificateThumbprint   | ❌                                                  |
+| Environment             | ❌                                                  |
+| Module                  | ❌                                                  |
+| Scopes                  | ✔️ Optional.                                      |
+| ServicePrincipal        | ❌                                                  |
+| UseAuthorizationCode    | ❌ will be replaced by  `-AuthenticationFlow OIDC`. |
+| UseDeviceAuthentication | ❌ replaced by `-AuthenticationFlow DeviceCode`.    |
+| AuthenticationFlow      | 🆕                                                  |
+| OutputFormat            | 🆕                                                  |
