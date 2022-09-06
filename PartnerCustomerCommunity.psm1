@@ -18,6 +18,36 @@ if (!(Get-Module -Name 'PSRunspacedDelegate')) {
 }
 $ErrorActionPreference = 'Stop'
 
+function Write-DebugObject {
+    [CmdletBinding()]
+    param (
+        $Message
+    )
+    if ($DebugPreference -in 'Continue', 'Inquire', 'Stop') {
+        if ($Message -is [string]) {
+            if ($Message.Length -gt 8) {
+                $NewMessage = $Message.Substring(0, 4) + '***' + $Message.Substring($Message.Length - 4, 4)
+            }
+            else {
+                $NewMessage = $Message
+            }
+            Write-Debug $NewMessage
+        }
+        elseif ($Message -is [PSCustomObject]) {
+            $NewMessage = $Message.PsObject.Copy()
+            foreach ($Property in $NewMessage.PsObject.Properties) {
+                if ($Property.Value -is [string] -and $Property.Value.Length -gt 8) {
+                    $Property.Value = $Property.Value.Substring(0, 4) + '***' + $Property.Value.Substring($Property.Value.Length - 4, 4)
+                }
+            }
+            Write-Debug ($NewMessage | Format-List | Out-String)
+        }
+        else {
+            throw "Write-DebugObject: $($Message.GetType()) is not a string or a PSCustomObject"
+        }
+    }
+}
+
 function New-PartnerAccessToken {
     <#
         .OUTPUTS
@@ -28,6 +58,7 @@ function New-PartnerAccessToken {
         https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model#get-access-token
         https://www.powershellgallery.com/packages/PartnerCenterLW/1.1
     #>
+    [CmdletBinding()]
     param (
         # Application ID and secret.
         [Parameter(Mandatory)]
@@ -83,6 +114,7 @@ function New-PartnerRefreshToken {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
     #>
+    [CmdletBinding()]
     param(
         # Limit to specific tenant.
         [string]$Tenant = 'common',
@@ -137,7 +169,7 @@ function New-PartnerRefreshToken {
                 # If not waiting for auth, throw error
                 if ($ErrorMessage.error -ne "authorization_pending") {
                     if ($ErrorMessage.error_description -like '*AADSTS7000218*') {
-                        throw ('"-Flow DeviceCode" requires "Allow public client flows" in Azure Portal -> "App registrations" -> "Authentication". Original Error:' + [Environment]::NewLine + $_.ErrorDetails.Message)
+                        throw ('"-AuthenticationFlow DeviceCode" requires "Allow public client flows" in Azure Portal -> "App registrations" -> "Authentication". Original Error:' + [Environment]::NewLine + $_.ErrorDetails.Message)
                     }
                     throw $_
                 }
@@ -145,7 +177,7 @@ function New-PartnerRefreshToken {
         }
     }
     elseif ($AuthenticationFlow -eq 'OIDC') {
-        throw '"-Flow OIDC" is not supported yet.'
+        throw '"-AuthenticationFlow OIDC" is not supported yet.'
     }
 
     if ($OutputFormat -eq 'Raw') {
@@ -165,6 +197,7 @@ function New-PartnerWebApp {
         https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model#create-a-web-app
         Updated version of https://www.cyberdrain.com/connect-to-exchange-online-automated-when-mfa-is-enabled-using-the-secureapp-model/
     #>
+    [CmdletBinding()]
     param(
         # Limit to specific tenant.
         [string]$Tenant,
@@ -220,7 +253,14 @@ function New-PartnerWebApp {
         $MgGraphParams['TenantId'] = $Tenant
     }
     Write-Host -ForegroundColor Green "When prompted please enter the appropriate credentials... Warning: Window might have pop-under in VSCode"
-    $null = Connect-MgGraph @MgGraphParams
+    Connect-MgGraph @MgGraphParams | ForEach-Object {
+        if ($_ -eq 'Welcome To Microsoft Graph!') {
+            Write-Host -ForegroundColor Green $_
+        }
+        else {
+            Write-Warning $_
+        }
+    }
 
     $AdAppAccess = @{
         ResourceAppId  = "00000002-0000-0000-c000-000000000000";
@@ -307,6 +347,7 @@ function Connect-PartnerCenter {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/partner-center-authentication#app--user-authentication
     #>
+    [CmdletBinding()]
     [OutputType('Microsoft.Store.PartnerCenter.AggregatePartnerOperations')]
     param (
         # Application ID and secret.
@@ -330,11 +371,14 @@ function Connect-PartnerCenter {
 
     class ScriptBlockDelegate {
         [ScriptBlock]$Code
+        $DebugPreferenceParent = $DebugPreference
 
         ScriptBlockDelegate([ScriptBlock]$Code) {
             $this.Code = $Code
         }
         [System.Threading.Tasks.Task[Microsoft.Store.PartnerCenter.AuthenticationToken]]Delegate([Microsoft.Store.PartnerCenter.AuthenticationToken]$ExpiredAuthenticationToken) {
+            $DebugPreference = $this.DebugPreferenceParent
+            Write-Debug "ScriptBlockDelegate Delegate: Started"
             $Func = New-RunspacedDelegate ([Func[object, Microsoft.Store.PartnerCenter.AuthenticationToken]] $this.Code)
             Return [System.Threading.Tasks.TaskFactory[Microsoft.Store.PartnerCenter.AuthenticationToken]]::new().StartNew($Func, $ExpiredAuthenticationToken)
         }
@@ -344,14 +388,15 @@ function Connect-PartnerCenter {
             [Microsoft.Store.PartnerCenter.AuthenticationToken]$ExpiredAuthenticationToken
         )
         $AccessToken = New-PartnerAccessToken -Credential $Credential -RefreshToken $RefreshToken -Tenant $Tenant
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration)
+        # Write-DebugObject $AccessToken -Debug:$DebugPreference
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration) # Debug: ([DateTimeOffset]::Now.AddSeconds(32))
     }.GetNewClosure()
     $Delegate = [ScriptBlockDelegate]::new($Callback)
     $TokenRefresher = $Delegate.Delegate
 
     $PartnerCredentials = [Microsoft.Store.PartnerCenter.Extensions.PartnerCredentials]::Instance.GenerateByUserCredentials(
         $ApplicationId,
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration),
+        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration), # Debug: ([DateTimeOffset]::Now.AddSeconds(32))
         $TokenRefresher,
         $null
     )
@@ -364,6 +409,7 @@ function Get-PartnerOrganizationProfile {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/get-an-organization-profile#c
     #>
+    [CmdletBinding()]
     [OutputType('Microsoft.Store.PartnerCenter.Models.Partners.OrganizationProfile')]
     param (
         # Return Task instead of result to support fast parallel execution.
@@ -382,6 +428,7 @@ function Get-PartnerOrganizationProfileRestExample {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/get-an-organization-profile#rest-request
     #>
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
         $AccessToken
@@ -521,6 +568,7 @@ function Get-PartnerCustomerSubscription {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/get-all-subscriptions-by-partner#c
     #>
+    [CmdletBinding()]
     [OutputType('Microsoft.Store.PartnerCenter.Models.Subscriptions.Subscription')]
     param (
         # Customer object.

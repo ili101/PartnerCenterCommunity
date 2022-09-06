@@ -74,7 +74,7 @@ New-PartnerAccessToken -Credential <App PSCredential> -RefreshToken <String> [-T
 # Old
 $Token = New-PartnerAccessToken -ApplicationId <String> -Scopes 'https://api.partnercenter.microsoft.com/user_impersonation' [-Tenant <String>] -UseDeviceAuthentication
 # New
-$Token = New-PartnerRefreshToken -ApplicationId <String> [-Scopes <String<>>] [-Tenant <String>] -Flow DeviceCode
+$Token = New-PartnerRefreshToken -ApplicationId <String> [-Scopes <String<>>] [-Tenant <String>] -AuthenticationFlow DeviceCode
 ```
 | Param                   | Status                                              |
 | ----------------------- | --------------------------------------------------- |
