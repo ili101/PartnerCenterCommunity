@@ -21,30 +21,33 @@ $ErrorActionPreference = 'Stop'
 function Write-DebugObject {
     [CmdletBinding()]
     param (
-        $Message
+        $Messages,
+        $Subject
     )
     if ($DebugPreference -in 'Continue', 'Inquire', 'Stop') {
-        if ($Message -is [string]) {
-            if ($Message.Length -gt 8) {
-                $NewMessage = $Message.Substring(0, 4) + '***' + $Message.Substring($Message.Length - 4, 4)
-            }
-            else {
-                $NewMessage = $Message
-            }
-            Write-Debug $NewMessage
-        }
-        elseif ($Message -is [PSCustomObject]) {
-            $NewMessage = $Message.PsObject.Copy()
-            foreach ($Property in $NewMessage.PsObject.Properties) {
-                if ($Property.Value -is [string] -and $Property.Value.Length -gt 8) {
-                    $Property.Value = $Property.Value.Substring(0, 4) + '***' + $Property.Value.Substring($Property.Value.Length - 4, 4)
+        $NewMessages = foreach ($Message in $Messages) {
+            if ($Message -is [string]) {
+                if ($Message.Length -gt 8) {
+                    $Message.Substring(0, 4) + '***' + $Message.Substring($Message.Length - 4, 4)
+                }
+                else {
+                    $Message
                 }
             }
-            Write-Debug ($NewMessage | Format-List | Out-String)
+            elseif ($Message -is [PSCustomObject]) {
+                $NewMessage = $Message.PsObject.Copy()
+                foreach ($Property in $NewMessage.PsObject.Properties) {
+                    if ($Property.Value -is [string] -and $Property.Value.Length -gt 8) {
+                        $Property.Value = $Property.Value.Substring(0, 4) + '***' + $Property.Value.Substring($Property.Value.Length - 4, 4)
+                    }
+                }
+                ($NewMessage | Format-List | Out-String).Trim()
+            }
+            else {
+                throw "Write-DebugObject: $($Message.GetType()) is not a string or a PSCustomObject"
+            }
         }
-        else {
-            throw "Write-DebugObject: $($Message.GetType()) is not a string or a PSCustomObject"
-        }
+        Write-Debug ($Subject, $NewMessages | Join-String -Separator ([Environment]::NewLine))
     }
 }
 
@@ -359,7 +362,10 @@ function Connect-PartnerCenter {
         [String]$RefreshToken,
 
         # Limit to specific tenant.
-        [string]$Tenant = 'common'
+        [string]$Tenant = 'common',
+
+        # # This script will run on "access token" refresh, can be used to save the now generated extended "refresh token" for next time.
+        [scriptblock]$RefreshTokenScript
     )
     if (!$Tenant) {
         $Tenant = 'common'
@@ -370,28 +376,39 @@ function Connect-PartnerCenter {
     $ApplicationId = $Credential.UserName
 
     class ScriptBlockDelegate {
-        [ScriptBlock]$Code
         $DebugPreferenceParent = $DebugPreference
+        [PSCredential]$Credential
+        [string]$RefreshToken
+        [string]$Tenant
+        [ScriptBlock]$RefreshTokenScript
 
-        ScriptBlockDelegate([ScriptBlock]$Code) {
-            $this.Code = $Code
+        ScriptBlockDelegate(
+            [PSCredential]$Credential,
+            [string]$RefreshToken,
+            [string]$Tenant,
+            [ScriptBlock]$RefreshTokenScript
+        ) {
+            $this.Credential = $Credential
+            $this.RefreshToken = $RefreshToken
+            $this.Tenant = $Tenant
+            $this.RefreshTokenScript = $RefreshTokenScript
         }
         [System.Threading.Tasks.Task[Microsoft.Store.PartnerCenter.AuthenticationToken]]Delegate([Microsoft.Store.PartnerCenter.AuthenticationToken]$ExpiredAuthenticationToken) {
             $DebugPreference = $this.DebugPreferenceParent
-            Write-Debug "ScriptBlockDelegate Delegate: Started"
-            $Func = New-RunspacedDelegate ([Func[object, Microsoft.Store.PartnerCenter.AuthenticationToken]] $this.Code)
+            $AccessToken = New-PartnerAccessToken -Credential $this.Credential -RefreshToken $this.RefreshToken -Tenant $this.Tenant
+            Write-DebugObject $AccessToken -Subject 'AccessToken refreshed:'
+            $this.RefreshToken = $AccessToken.RefreshToken
+            if ($this.RefreshTokenScript) {
+                $null = & $this.RefreshTokenScript $AccessToken
+            }
+
+            $AuthenticationToken = [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration) # Debug: ([DateTimeOffset]::Now.AddSeconds(32))
+            $Callback = { $AuthenticationToken }.GetNewClosure()
+            $Func = New-RunspacedDelegate ([Func[object, Microsoft.Store.PartnerCenter.AuthenticationToken]] $Callback)
             Return [System.Threading.Tasks.TaskFactory[Microsoft.Store.PartnerCenter.AuthenticationToken]]::new().StartNew($Func, $ExpiredAuthenticationToken)
         }
     }
-    $Callback = {
-        param (
-            [Microsoft.Store.PartnerCenter.AuthenticationToken]$ExpiredAuthenticationToken
-        )
-        $AccessToken = New-PartnerAccessToken -Credential $Credential -RefreshToken $RefreshToken -Tenant $Tenant
-        # Write-DebugObject $AccessToken -Debug:$DebugPreference
-        [Microsoft.Store.PartnerCenter.AuthenticationToken]::new($AccessToken.AccessToken, $AccessToken.AccessTokenExpiration) # Debug: ([DateTimeOffset]::Now.AddSeconds(32))
-    }.GetNewClosure()
-    $Delegate = [ScriptBlockDelegate]::new($Callback)
+    $Delegate = [ScriptBlockDelegate]::new($Credential, $RefreshToken, $Tenant, $RefreshTokenScript)
     $TokenRefresher = $Delegate.Delegate
 
     $PartnerCredentials = [Microsoft.Store.PartnerCenter.Extensions.PartnerCredentials]::Instance.GenerateByUserCredentials(

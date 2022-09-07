@@ -10,6 +10,7 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | CertificateThumbprint | ❌                                                           |
 | Environment           | ❌                                                           |
 | ServicePrincipal      | ❌                                                           |
+| RefreshTokenScript    | 🆕 For saving the now generated extended "refresh token"     |
 
 ### Get-PartnerOrganizationProfile
 | Param             | Status |

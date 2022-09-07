@@ -68,7 +68,7 @@ Example [Examples\Authentication.ps1](Examples\Authentication.ps1)
 ## ToDo
 Help appreciated, open an issue to collaborate🙏
 #### Prioritized
-* ~~Find how to refresh the token, currently it will expire after 3 hours and it's needed to run `Connect-PartnerCenter` again.~~ Added but need more work.
+* ~~Find how to refresh the token, currently it will expire after 1 hours and it's needed to run `Connect-PartnerCenter` again.~~
 * Implement more Cmdlets from the PartnerCenter module.
 * Probably more stuff im missing 😅.
 #### Optional
