@@ -58,7 +58,6 @@ https://github.com/ili101/PartnerCustomerCommunity/blob/master/README.md
 
     # Assemblies that must be loaded prior to importing this module
     RequiredAssemblies = @(
-        '.\lib\Microsoft.Identity.Client.dll',
         '.\lib\Microsoft.Store.PartnerCenter.dll',
         '.\lib\Microsoft.Store.PartnerCenter.Models.dll',
         '.\lib\Microsoft.Store.PartnerCenter.Extensions.dll'
