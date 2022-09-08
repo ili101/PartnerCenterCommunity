@@ -77,19 +77,19 @@ $Token = New-PartnerAccessToken -ApplicationId <String> -Scopes 'https://api.par
 # New
 $Token = New-PartnerRefreshToken -ApplicationId <String> [-Scopes <String<>>] [-Tenant <String>] -AuthenticationFlow DeviceCode
 ```
-| Param                   | Status                                              |
-| ----------------------- | --------------------------------------------------- |
-| Credential              | ❌                                                  |
-| RefreshToken            | ❌                                                  |
-| Tenant                  | ✔️                                                |
-| AccessToken             | ❌                                                  |
-| ApplicationId           | ✔️                                                |
-| CertificateThumbprint   | ❌                                                  |
-| Environment             | ❌                                                  |
-| Module                  | ❌                                                  |
-| Scopes                  | ✔️ Optional.                                      |
-| ServicePrincipal        | ❌                                                  |
-| UseAuthorizationCode    | ❌ will be replaced by  `-AuthenticationFlow OIDC`. |
-| UseDeviceAuthentication | ❌ replaced by `-AuthenticationFlow DeviceCode`.    |
-| AuthenticationFlow      | 🆕                                                  |
-| OutputFormat            | 🆕                                                  |
+| Param                   | Status                                             |
+| ----------------------- | -------------------------------------------------- |
+| Credential              | ✔️ ParameterSet `-AuthenticationFlow OIDC`       |
+| RefreshToken            | ❌                                                 |
+| Tenant                  | ✔️                                               |
+| AccessToken             | ❌                                                 |
+| ApplicationId           | ✔️ ParameterSet `-AuthenticationFlow DeviceCode` |
+| CertificateThumbprint   | ❌                                                 |
+| Environment             | ❌                                                 |
+| Module                  | ❌                                                 |
+| Scopes                  | ✔️ Optional.                                     |
+| ServicePrincipal        | ❌                                                 |
+| UseAuthorizationCode    | ❌ replaced by  `-AuthenticationFlow OIDC`.        |
+| UseDeviceAuthentication | ❌ replaced by `-AuthenticationFlow DeviceCode`.   |
+| AuthenticationFlow      | 🆕 Default: OIDC.                                  |
+| OutputFormat            | 🆕                                                 |

@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2-alpha] - 2022-09-08
 ### Added
 * `Connect-PartnerCenter -RefreshTokenScript`
+* `New-PartnerWebApp -AuthenticationFlowAllowed`
+* `New-PartnerRefreshToken -AuthenticationFlow OIDC` With [Pode](https://badgerati.github.io/Pode/)
 
 ## [0.0.1-alpha] - 2022-09-05
 * Release Test.

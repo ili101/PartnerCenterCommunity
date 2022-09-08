@@ -117,27 +117,33 @@ function New-PartnerRefreshToken {
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/enable-secure-app-model
     #>
+    [CmdletBinding(DefaultParameterSetName = 'OIDC')]
     [CmdletBinding()]
     param(
         # Limit to specific tenant.
         [string]$Tenant = 'common',
 
         # Your CSP/Partner Center application/Client ID.
-        [Parameter(Mandatory)]
+        [Parameter(ParameterSetName = 'DeviceCode', Mandatory)]
         [string]$ApplicationId,
+
+        # Application ID and secret.
+        [Parameter(ParameterSetName = 'OIDC', Mandatory)]
+        [PSCredential]$Credential,
 
         # Scope of the RefreshToken. Each endpoint needs its own consented RefreshToken.
         [ArgumentCompleter({
-                'user.read', 'openid', 'profile',
+                'user.read', 'openid', 'profile', 'offline_access',
                 'https://api.partnercenter.microsoft.com/user_impersonation',
                 'https://outlook.office365.com/.default'
             })]
-        [string[]]$Scopes = @('https://api.partnercenter.microsoft.com/user_impersonation'),
+        [string[]]$Scopes = @('https://api.partnercenter.microsoft.com/user_impersonation', 'offline_access', 'openid', 'profile'),
 
         # Authorization grant flow.
-        # https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
+        # OIDC       - https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc
+        # DeviceCode - https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
         [ValidateSet('OIDC', 'DeviceCode')]
-        [string]$AuthenticationFlow = 'DeviceCode',
+        [string]$AuthenticationFlow = 'OIDC',
 
         [ValidateSet('Raw', 'OnlyRefreshToken')]
         [string]$OutputFormat = 'OnlyRefreshToken'
@@ -145,27 +151,32 @@ function New-PartnerRefreshToken {
     if (!$Tenant) {
         $Tenant = 'common'
     }
-
-    $CodeBody = @{
-        client_id = $ApplicationId
-        scope     = $Scopes -join ' '
+    if ($AuthenticationFlow -eq 'DeviceCode' -and !($ApplicationId)) {
+        throw "`New-PartnerRefreshToken -ApplicationId` is required when using `-AuthenticationFlow DeviceCode`."
+    }
+    elseif ($AuthenticationFlow -eq 'OIDC' -and !($Credential)) {
+        throw "`New-PartnerRefreshToken -Credential` is required when using `-AuthenticationFlow OIDC`."
     }
 
     if ($AuthenticationFlow -eq 'DeviceCode') {
         # Get the authorization code.
+        $CodeBody = @{
+            client_id = $ApplicationId
+            scope     = $Scopes -join ' '
+        }
         $AuthorizationCodeResponse = Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$Tenant/oauth2/v2.0/devicecode" -Body $CodeBody
         Write-Warning $AuthorizationCodeResponse.message
 
         # Get the RefreshToken.
         $RefreshTokenBody = @{
-            grant_type = 'urn:ietf:params:oauth:grant-type:device_code'
-            code       = $AuthorizationCodeResponse.device_code
-            client_id  = $ApplicationId
+            grant_type  = 'urn:ietf:params:oauth:grant-type:device_code'
+            device_code = $AuthorizationCodeResponse.device_code
+            client_id   = $ApplicationId
         }
         while ([string]::IsNullOrEmpty($RefreshTokenResponse.access_token)) {
             Start-Sleep -Seconds 5
             $RefreshTokenResponse = try {
-                Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$Tenant/oauth2/token" -Body $RefreshTokenBody
+                Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$Tenant/oauth2/v2.0/token" -Body $RefreshTokenBody
             }
             catch {
                 $ErrorMessage = $_.ErrorDetails.Message | ConvertFrom-Json
@@ -180,7 +191,79 @@ function New-PartnerRefreshToken {
         }
     }
     elseif ($AuthenticationFlow -eq 'OIDC') {
-        throw '"-AuthenticationFlow OIDC" is not supported yet.'
+        $Module = 'Pode'
+        if (!(Get-Module -Name $Module -ListAvailable)) {
+            Install-Module $Module
+        }
+
+        $PodeJob = Start-Job {
+            $UsedPorts = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue
+            $Port = [Linq.Enumerable]::First([Linq.Enumerable]::Except([Linq.Enumerable]::Range(8400, 600), [int[]]$UsedPorts.LocalPort))
+            @{ Port = $Port }
+            Start-PodeServer -Quiet {
+                Add-PodeEndpoint -Address localhost -Port $Port -Protocol Http
+                Write-Information (@{ Port = $Port } | ConvertTo-Json)
+                Add-PodeRoute -Method POST -Path '/' -ScriptBlock {
+                    Write-PodeJsonResponse -Value $WebEvent.Data
+                    Out-PodeVariable -Name Code -Value $WebEvent.Data.code
+                    Close-PodeServer
+                }
+            }
+            @{ Code = $Code }
+        }
+        while ($PodeJob.State -eq 'Running') {
+            $PodeJob | Receive-Job | ForEach-Object {
+                if ($_.Port) {
+                    $Port = $_.Port
+                    break
+                }
+                else {
+                    Write-Warning ($_ | Format-List | Out-String)
+                }
+            }
+            Start-Sleep -Seconds 0.2
+        }
+        $Uri = "https://login.microsoftonline.com/$Tenant/oauth2/v2.0/authorize"
+        $ParametersCode = @{
+            client_id     = $Credential.UserName
+            response_mode = 'form_post'
+            response_type = 'code id_token'
+            scope         = $Scopes -join ' '
+            nonce         = 1
+            redirect_uri  = "http://localhost:$port/"
+            prompt        = 'select_account'
+        }
+        # Build the URI.
+        $ParametersCodeCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
+        foreach ($key in $ParametersCode.Keys) {
+            $ParametersCodeCollection.Add($key, $ParametersCode.$key)
+        }
+        $UriRequest = [System.UriBuilder]$Uri
+        $UriRequest.Query = $ParametersCodeCollection.ToString()
+
+        Start-Process $UriRequest
+        $Code = $null
+        $PodeJob | Receive-Job -Wait | ForEach-Object {
+            if ($_.Code) {
+                $Code = $_.Code
+            }
+            else {
+                Write-Warning ($_ | Format-List | Out-String)
+            }
+        }
+        if (!$Code) {
+            throw 'Failed to get the authorization code.'
+        }
+
+        $Uri = "https://login.microsoftonline.com/$Tenant/oauth2/v2.0/token"
+        $RefreshTokenParameters = @{
+            client_id     = $Credential.UserName
+            client_secret = $Credential.GetNetworkCredential().Password
+            grant_type    = "authorization_code"
+            code          = $Code
+            redirect_uri  = "http://localhost:$port/"
+        }
+        $RefreshTokenResponse = Invoke-RestMethod -Uri $Uri -ContentType "application/x-www-form-urlencoded" -Method POST -Body $RefreshTokenParameters
     }
 
     if ($OutputFormat -eq 'Raw') {
@@ -209,12 +292,15 @@ function New-PartnerWebApp {
         [string]$DisplayName,
 
         # Authorization grant flow.
-        # https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
+        # OIDC       - https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc
+        # DeviceCode - https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-device-code
         [ValidateSet('OIDC', 'DeviceCode')]
         [string]$AuthenticationFlow = 'OIDC',
 
-        # Use this if you need the WebApp to support `New-PartnerRefreshToken -AuthenticationFlow DeviceCode`
-        [switch]$IsFallbackPublicClient,
+        # OIDC       - If you need the WebApp to support `New-PartnerRefreshToken -AuthenticationFlow OIDC` (EnableIdTokenIssuance).
+        # DeviceCode - If you need the WebApp to support `New-PartnerRefreshToken -AuthenticationFlow DeviceCode` (IsFallbackPublicClient).
+        [ValidateSet('OIDC', 'DeviceCode')]
+        [string[]]$AuthenticationFlowAllowed = 'OIDC',
 
         # Stay connected to MgGraph.
         [switch]$StayConnected,
@@ -308,9 +394,26 @@ function New-PartnerWebApp {
     }
 
     Write-Host -ForegroundColor Green "Creating the Azure AD application and related resources..."
-    $Application = New-MgApplication -DisplayName $DisplayName -RequiredResourceAccess ($AdAppAccess, $GraphAppAccess, $PartnerCenterAppAccess) -IsFallbackPublicClient:$IsFallbackPublicClient -SignInAudience 'AzureADMultipleOrgs' -Web @{
-        RedirectUris = @("urn:ietf:wg:oauth:2.0:oob", "https://login.microsoftonline.com/organizations/oauth2/nativeclient", "https://localhost", "http://localhost", "http://localhost:8400")
+    $ApplicationParams = @{
+        DisplayName            = $DisplayName
+        RequiredResourceAccess = ($AdAppAccess, $GraphAppAccess, $PartnerCenterAppAccess)
+        SignInAudience         = 'AzureADMultipleOrgs'
+        Web                    = @{
+            RedirectUris          = @("urn:ietf:wg:oauth:2.0:oob", "https://login.microsoftonline.com/organizations/oauth2/nativeclient", "https://localhost", "http://localhost", "http://localhost:8400")
+            ImplicitGrantSettings = @{
+                EnableIdTokenIssuance = $true
+            }
+        }
     }
+    if ($AuthenticationFlowAllowed -contains 'DeviceCode') {
+        $ApplicationParams['IsFallbackPublicClient'] = $true
+    }
+    if ($AuthenticationFlowAllowed -contains 'OIDC') {
+        $ApplicationParams['Web']['ImplicitGrantSettings'] = @{
+            EnableIdTokenIssuance = $true
+        }
+    }
+    $Application = New-MgApplication @ApplicationParams
 
     $ApplicationPassword = Add-MgApplicationPassword -ApplicationId $Application.Id
 

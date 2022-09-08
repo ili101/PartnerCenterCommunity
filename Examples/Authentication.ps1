@@ -7,37 +7,15 @@
 #<# Workaround TODO: Remove this workaround
 Connect-MgGraph
 #>
-$WebApp = New-PartnerWebApp -DisplayName ('Test ' + (Get-Date -Format s)) -IsFallbackPublicClient -StayConnected
+$WebApp = New-PartnerWebApp -DisplayName ('Test ' + (Get-Date -Format s)) -StayConnected
 Write-Warning ('Remember to update the WebApp secret on {0}.' -f $WebApp.SecretExpiration)
 
 # Get an authorization code (web app -> authorization code) #
 # Get a refresh token (authorization code -> refresh token) #
 # Need to be done once, or if the refresh token was not used for 90 days and expired.
-# Will throw an error if `New-PartnerWebApp` was run recently so I added retry/sleep logic:
-try {
-    $RefreshToken = $null
-    $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    do {
-        try {
-            $RefreshToken = New-PartnerRefreshToken -ApplicationId $WebApp.Credential.UserName
-        }
-        catch {
-            if ($Stopwatch.Elapsed.Minutes -ge 2) {
-                throw $_
-            }
-            if ($_ -like '*AADSTS50059*' -or $_ -like '*AADSTS700016*') {
-                Write-Warning ('WebApp not created yet, elapsed {0}, retrying...' -f $Stopwatch.Elapsed.ToString())
-                Start-Sleep -Seconds 5
-            }
-            else {
-                throw $_
-            }
-        }
-    } until ($RefreshToken)
-}
-finally {
-    $Stopwatch.Stop()
-}
+Write-Warning 'Sleeping for 50 seconds to allow app creation on O365.'
+Start-Sleep -Seconds 50
+$RefreshToken = New-PartnerRefreshToken -Credential $WebApp.Credential
 
 # Lets save our credentials so we can run the next part non-interactively #
 # In this example to file, but preferably to something like a vault.
