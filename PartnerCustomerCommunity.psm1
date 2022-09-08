@@ -202,7 +202,6 @@ function New-PartnerRefreshToken {
             @{ Port = $Port }
             Start-PodeServer -Quiet {
                 Add-PodeEndpoint -Address localhost -Port $Port -Protocol Http
-                Write-Information (@{ Port = $Port } | ConvertTo-Json)
                 Add-PodeRoute -Method POST -Path '/' -ScriptBlock {
                     Write-PodeJsonResponse -Value $WebEvent.Data
                     Out-PodeVariable -Name Code -Value $WebEvent.Data.code
