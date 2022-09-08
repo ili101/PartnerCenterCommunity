@@ -4,9 +4,6 @@
 
 # Create a web app (admin user -> web app) #
 # Done once.
-#<# Workaround TODO: Remove this workaround
-Connect-MgGraph
-#>
 $WebApp = New-PartnerWebApp -DisplayName ('Test ' + (Get-Date -Format s)) -StayConnected
 Write-Warning ('Remember to update the WebApp secret on {0}.' -f $WebApp.SecretExpiration)
 
