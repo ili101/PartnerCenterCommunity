@@ -1,6 +1,6 @@
-❌ Exist in old module but not on `PartnerCustomerCommunity` (unneeded, replaced or not implemented yet).
-✔️ Exist in both modules.
-🆕 New parameter/functionality in `PartnerCustomerCommunity` that was not in old module.
+❌ Exist in old module but not on `PartnerCustomerCommunity` (unneeded, replaced or not implemented yet).<br>
+✔️ Exist in both modules.<br>
+🆕 New parameter/functionality in `PartnerCustomerCommunity` that was not in old module.<br>
 🔃 New replacement/renamed.
 
 ### 🆕 New-PartnerWebApp
@@ -69,8 +69,6 @@ New-PartnerAccessToken -Credential <App PSCredential> -RefreshToken <String> [-T
 | UseDeviceAuthentication | ❌     |
 | OutputFormat            | 🆕     |
 
-
-
 ### Connect-PartnerCenter
 Currently only support [App + User authentication](https://docs.microsoft.com/en-us/partner-center/develop/partner-center-authentication#app--user-authentication) (not sure if other methods are needed or still supported?).
 | Param                 | Status                                                       |
@@ -119,4 +117,3 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | InputObject       | 🆕 Pipeline Customer. |
 | Async             | 🆕⚙️                |
 | PartnerOperations | 🆕⚙️                |
-
