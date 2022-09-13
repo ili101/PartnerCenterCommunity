@@ -711,7 +711,9 @@ function Get-PartnerCustomerSubscription {
         [string]$CustomerId,
 
         # $MpnId
-        # $SubscriptionId
+
+        # Customer Subscription ID.
+        [string]$SubscriptionId,
 
         [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
         [string]$OutputFormat = 'Raw',
@@ -727,7 +729,13 @@ function Get-PartnerCustomerSubscription {
         $CustomerId = $InputObject.Id
     }
 
-    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.$Get().Items | Format-Output -OutputFormat $OutputFormat
+    $OutputRaw = if ($SubscriptionId) {
+        $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).$Get()
+    }
+    else {
+        $PartnerOperations.Customers.ById($CustomerId).Subscriptions.$Get().Items
+    }
+    $OutputRaw | Format-Output -OutputFormat $OutputFormat
 }
 
 function Get-PartnerIndirectReseller {
@@ -838,7 +846,7 @@ function Get-Flattened {
                     continue
                 }
                 if ($Property.PropertyType.ImplementedInterfaces -contains [System.Collections.IEnumerable]) {
-                    if ($Property.PropertyType.GenericTypeArguments.Count -eq 1) {
+                    if (($Property.PropertyType.GenericTypeArguments | Select-Object -Unique).Count -eq 1) {
                         $SubType = $Property.PropertyType.GenericTypeArguments[0]
                     }
                     elseif ($Property.PropertyType.GenericTypeArguments.Count -gt 1) {
@@ -877,4 +885,141 @@ function Get-Flattened {
             [PSCustomObject]$Output
         }
     }
+}
+
+function Get-PartnerCustomerOrder {
+    <#
+        .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/get-an-order-by-id#c
+    #>
+    [OutputType('Microsoft.Store.PartnerCenter.Models.Subscriptions.Subscription')]
+    param (
+        # Customer object.
+        [Parameter(ParameterSetName = 'PipeLine', Mandatory, ValueFromPipeLine)]
+        $InputObject,
+
+        # Customer tenant ID.
+        [Parameter(ParameterSetName = 'CustomerId', Mandatory)]
+        [string]$CustomerId,
+
+        # Customer Order ID.
+        [string]$OrderId,
+
+        # Include Price.
+        [bool]$IncludePrice,
+
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
+        # PartnerOperations session, if not provided last generated one will be automatically used.
+        $PartnerOperations = $Script:PartnerOperations
+    )
+    $Get = $Async ? 'GetAsync' : 'Get'
+    if ($InputObject) {
+        $CustomerId = $InputObject.Id
+    }
+
+    $OutputRaw = if ($OrderId) {
+        $PartnerOperations.Customers.ById($CustomerId).Orders.ById($OrderId).$Get($IncludePrice)
+    }
+    else {
+        $PartnerOperations.Customers.ById($CustomerId).Orders.$Get($IncludePrice).Items
+    }
+    $OutputRaw | Format-Output -OutputFormat $OutputFormat
+}
+
+function Get-TransitionEligibilities {
+    <#
+        .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/transition-a-new-commerce-subscription
+    #>
+    [OutputType('Microsoft.Store.PartnerCenter.Models.Subscriptions.Subscription')]
+    param (
+        # Customer tenant ID.
+        [Parameter(Mandatory)]
+        [string]$CustomerId,
+
+        # Customer Subscription ID.
+        [Parameter(Mandatory)]
+        [string]$SubscriptionId,
+
+        [ValidateSet('immediate', 'scheduled')]
+        $EligibilityType,
+
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
+        # PartnerOperations session, if not provided last generated one will be automatically used.
+        $PartnerOperations = $Script:PartnerOperations
+    )
+    $Get = $Async ? 'GetAsync' : 'Get'
+
+    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).TransitionEligibilities.$Get($EligibilityType).Items | Format-Output -OutputFormat $OutputFormat
+}
+
+function New-Transition {
+    <#
+        .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/transition-a-new-commerce-subscription
+    #>
+    [OutputType('Microsoft.Store.PartnerCenter.Models.Subscriptions.Subscription')]
+    param (
+        # Customer tenant ID.
+        [Parameter(Mandatory)]
+        [string]$CustomerId,
+
+        # Customer Subscription ID.
+        [Parameter(Mandatory)]
+        [string]$SubscriptionId,
+
+        # The catalog item you are transitioning to.
+        [Parameter(Mandatory)]
+        [string]$ToCatalogItemId,
+
+        # The subscription ID you are transitioning to.
+        [string]$ToSubscriptionId,
+
+        # The number of licenses to transition over.
+        [Parameter(Mandatory)]
+        [int]$Quantity,
+
+        # Specifying the term duration of the subscription.
+        [ArgumentCompleter({ 'P1M', 'P1Y', 'P3Y' })]
+        [string]$TermDuration,
+
+        # Specifying the billing cycle of the subscription.
+        [ArgumentCompleter({ 'Monthly', 'Annual', 'Triennial' })]
+        [string]$BillingCycle,
+
+        # The transition type. Possible values - transition_only, transition_with_license_transfer.
+        [Parameter(Mandatory)]
+        [ValidateSet('transition_only', 'transition_with_license_transfer')]
+        [string]$TransitionType,
+
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
+        # PartnerOperations session, if not provided last generated one will be automatically used.
+        $PartnerOperations = $Script:PartnerOperations
+    )
+    $Create = $Async ? 'CreateAsync' : 'Create'
+
+    $Transition = [Microsoft.Store.PartnerCenter.Models.Subscriptions.Transition]::new()
+    $Transition.ToCatalogItemId = $ToCatalogItemId
+    $Transition.Quantity = $Quantity
+    $Transition.TransitionType = $TransitionType
+    $Transition.ToSubscriptionId = $ToSubscriptionId
+    $Transition.TermDuration = $TermDuration
+    $Transition.BillingCycle = $BillingCycle
+
+    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).Transitions.$Create($Transition) | Format-Output -OutputFormat $OutputFormat
 }

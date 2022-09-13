@@ -8,7 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3-alpha] - 2022-09-13
+### Added
+* `Get-PartnerCustomerOrder`.
+* Added new transition CmdLets to NCE `Get-TransitionEligibilities` and `New-Transition`.
 * `-OutputFormat` added to CmdLets with new `FlatAutoFull`, `FlatAutoNoLinksAttributes` and example of `Compatibility`.
+### Packaging
 * Add missing dependency `[Microsoft.IdentityModel.Abstractions]`.
 * `Microsoft.Identity.Client.dll` load implicitly if needed as a dependency.
 * Dll updater helper `Updater.ps1`.

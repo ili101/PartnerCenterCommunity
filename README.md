@@ -14,8 +14,9 @@ Make it easy and inviting to anyone that wants to contribute by fixing or adding
 * Now parameter `Get-PartnerCustomer -IndirectResellerId <GUID>`.
 * Get Cmdlets output usually have more data.
 * Optional async support to support faster parallel execution.
-* `New-PartnerWebApp`.
+* New CmdLet `New-PartnerWebApp`.
 * Now parameter `Connect-PartnerCenter -RefreshTokenScript <ScriptBlock>`.
+* New CmdLets for NCE transition: `Get-TransitionEligibilities` and `New-Transition`.
 
 ## Design choices
 #### Language
@@ -33,14 +34,17 @@ I think that we should go with the PowerShell + dlls approach, it requires only 
 * We can potentially add multiple options to the new `-OutputFormat` parameter on all Cmdlets. with option like "Raw" (return all as is), "Compatibility" (equivalent to PartnerCenter), "New", etc.
 
 ## Cmdlets implemented so far
-* `New-PartnerWebApp`
-* `New-PartnerRefreshToken`
+* `New-PartnerWebApp` 🆕
+* `New-PartnerRefreshToken` 🔃
 * `New-PartnerAccessToken`
 * `Connect-PartnerCenter`
 * `Get-PartnerOrganizationProfile`
 * `Get-PartnerCustomer`
 * `Get-PartnerCustomerSubscription`
 * `Get-PartnerIndirectReseller`
+* `Get-PartnerCustomerOrder`
+* `Get-TransitionEligibilities` 🆕
+* `New-Transition` 🆕
 
 More info [Cmdlet map.md](Cmdlet%20map.md)
 

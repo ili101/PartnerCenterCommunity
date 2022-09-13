@@ -86,6 +86,7 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 ### Get-PartnerOrganizationProfile
 | Param             | Status |
 | ----------------- | ------ |
+| OutputFormat      | 🆕⚙️ |
 | Async             | 🆕⚙️ |
 | PartnerOperations | 🆕⚙️ |
 
@@ -95,6 +96,7 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | CustomerId         | ✔️                                                                        |
 | InputObject        | 🆕 Pipeline Customer.                                                       |
 | IndirectResellerId | 🆕 Reseller tenant ID, if provided filter customers from specific reseller. |
+| OutputFormat       | 🆕⚙️                                                                          |
 | Async              | 🆕⚙️                                                                      |
 | PartnerOperations  | 🆕⚙️                                                                      |
 | Domain             | ❌                                                                          |
@@ -104,6 +106,7 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | ----------------- | ------ |
 | InputObject       | ✔️   |
 | CustomerId        | ✔️   |
+| OutputFormat      | 🆕⚙️ |
 | Async             | 🆕⚙️ |
 | PartnerOperations | 🆕⚙️ |
 | OrderId           | ❌     |
@@ -115,5 +118,42 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | ----------------- | --------------------- |
 | CustomerId        | ✔️                  |
 | InputObject       | 🆕 Pipeline Customer. |
+| OutputFormat      | 🆕⚙️                |
 | Async             | 🆕⚙️                |
 | PartnerOperations | 🆕⚙️                |
+
+### Get-PartnerCustomerOrder
+| Param             | Status                |
+| ----------------- | --------------------- |
+| InputObject       | 🆕 Pipeline Customer. |
+| CustomerId        | ✔️                  |
+| OrderId           | ✔️                  |
+| IncludePrice      | ✔️                  |
+| OutputFormat      | 🆕⚙️                |
+| Async             | 🆕⚙️                |
+| PartnerOperations | 🆕⚙️                |
+
+### 🆕 Get-TransitionEligibilities
+| Param             | Status |
+| ----------------- | ------ |
+| CustomerId        | 🆕     |
+| SubscriptionId    | 🆕     |
+| EligibilityType   | 🆕     |
+| OutputFormat      | 🆕⚙️ |
+| Async             | 🆕⚙️ |
+| PartnerOperations | 🆕⚙️ |
+
+### 🆕 New-Transition
+| Param             | Status |
+| ----------------- | ------ |
+| CustomerId        | 🆕     |
+| SubscriptionId    | 🆕     |
+| ToCatalogItemId   | 🆕     |
+| ToSubscriptionId  | 🆕     |
+| Quantity          | 🆕     |
+| TermDuration      | 🆕     |
+| BillingCycle      | 🆕     |
+| TransitionType    | 🆕     |
+| OutputFormat      | 🆕⚙️ |
+| Async             | 🆕⚙️ |
+| PartnerOperations | 🆕⚙️ |
