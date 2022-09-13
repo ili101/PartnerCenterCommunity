@@ -11,10 +11,11 @@ Make it easy and inviting to anyone that wants to contribute by fixing or adding
 
 ## Improvements over PartnerCustomer so far
 * Uses the latest version of the dlls. Probably solves some of the open PartnerCustomer module Issues? if you know of something specific please share.
-* Now switch `Get-PartnerCustomer -IndirectResellerId <GUID>`.
+* Now parameter `Get-PartnerCustomer -IndirectResellerId <GUID>`.
 * Get Cmdlets output usually have more data.
 * Optional async support to support faster parallel execution.
 * `New-PartnerWebApp`.
+* Now parameter `Connect-PartnerCenter -RefreshTokenScript <ScriptBlock>`.
 
 ## Design choices
 #### Language
@@ -29,7 +30,7 @@ I think that we should go with the PowerShell + dlls approach, it requires only 
 
 #### Cmdlets
 * We can maintain the same Cmdlets and parameters names as [PartnerCenter](https://www.powershellgallery.com/packages/PartnerCenter/) when reasonable. This make the module easy to migrate to and also make it easier to write as we have a good baseline to work on and existing documentation.
-* Currently the functions return the raw response, we can potentially add an `-Output` parameter to all Cmdlets with option like "Raw", "Compatibility", "New" etc.
+* We can potentially add multiple options to the new `-OutputFormat` parameter on all Cmdlets. with option like "Raw" (return all as is), "Compatibility" (equivalent to PartnerCenter), "New", etc.
 
 ## Cmdlets implemented so far
 * `New-PartnerWebApp`
@@ -63,7 +64,7 @@ Connecting will do this automatically `Connect-PartnerCenter`.
 Just run any of the CmdLets, `Connect-PartnerCenter` holds the session credentials in the module scope.
 
 ### Example
-Example [Examples\Authentication.ps1](Examples\Authentication.ps1)
+Example [Examples/Authentication.ps1](Examples/Authentication.ps1)
 
 ## ToDo
 Help appreciated, open an issue to collaborate🙏
@@ -72,7 +73,7 @@ Help appreciated, open an issue to collaborate🙏
 * Implement more Cmdlets from the PartnerCenter module.
 * Probably more stuff im missing 😅.
 #### Optional
-* Add `-Output` parameter to Cmdlets.
+* Add more `-OutputFormat` parameter options to Cmdlets.
 * ~~Add App creation if there is interest? (code exist but need to be updated and cleaned as it uses deprecated MS modules).~~
 * ~~Add `New-PartnerRefreshToken -AuthenticationFlow 'OIDC'` using "Pode".~~
 * Add GitHub Actions testing. We will probably need a "Demo" PartnerCustomer organization for this?

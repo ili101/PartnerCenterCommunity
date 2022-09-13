@@ -63,7 +63,7 @@ function New-PartnerAccessToken {
         # Limit to specific tenant.
         [string]$Tenant = 'common',
 
-        [ValidateSet('Raw', 'Minimal')]
+        [ValidateSet('Raw', 'Minimal', 'FlatAutoFull')]
         [string]$OutputFormat = 'Minimal'
     )
     if (!$Tenant) {
@@ -80,15 +80,15 @@ function New-PartnerAccessToken {
 
     $ReturnCred = Invoke-RestMethod -Uri $Uri -ContentType "application/x-www-form-urlencoded" -Method POST -Body $AuthBody -ErrorAction Stop
 
-    if ($OutputFormat -eq 'Raw') {
-        $ReturnCred
-    }
-    elseif ($OutputFormat -eq 'Minimal') {
+    if ($OutputFormat -eq 'Minimal') {
         [PSCustomObject][ordered]@{
             AccessTokenExpiration = [DateTimeOffset]::FromUnixTimeSeconds($ReturnCred.expires_on).LocalDateTime
             AccessToken           = $ReturnCred.access_token
             RefreshToken          = $ReturnCred.refresh_token
         }
+    }
+    else {
+        $ReturnCred | Format-Output -OutputFormat $OutputFormat
     }
 }
 
@@ -134,7 +134,7 @@ function New-PartnerRefreshToken {
         [ValidateSet('OIDC', 'DeviceCode')]
         [string]$AuthenticationFlow = 'OIDC',
 
-        [ValidateSet('Raw', 'OnlyRefreshToken')]
+        [ValidateSet('Raw', 'OnlyRefreshToken', 'FlatAutoFull')]
         [string]$OutputFormat = 'OnlyRefreshToken'
     )
     if (!$Tenant) {
@@ -254,11 +254,11 @@ function New-PartnerRefreshToken {
         $RefreshTokenResponse = Invoke-RestMethod -Uri $Uri -ContentType "application/x-www-form-urlencoded" -Method POST -Body $RefreshTokenParameters
     }
 
-    if ($OutputFormat -eq 'Raw') {
-        $RefreshTokenResponse
-    }
-    elseif ($OutputFormat -eq 'OnlyRefreshToken') {
+    if ($OutputFormat -eq 'OnlyRefreshToken') {
         $RefreshTokenResponse.refresh_token
+    }
+    else {
+        $RefreshTokenResponse | Format-Output -OutputFormat $OutputFormat
     }
 }
 
@@ -293,7 +293,7 @@ function New-PartnerWebApp {
         # Stay connected to MgGraph.
         [switch]$StayConnected,
 
-        [ValidateSet('Raw', 'Minimal')]
+        [ValidateSet('Raw', 'Minimal', 'FlatAutoFull')]
         [string]$OutputFormat = 'Minimal'
     )
 
@@ -414,13 +414,7 @@ function New-PartnerWebApp {
         $null = Disconnect-MgGraph
     }
 
-    if ($OutputFormat -eq 'Raw') {
-        [PSCustomObject][ordered]@{
-            ApplicationPassword = $ApplicationPassword
-            Application         = $Application
-        }
-    }
-    elseif ($OutputFormat -eq 'Minimal') {
+    if ($OutputFormat -eq 'Minimal') {
         $SecretSecureString = $ApplicationPassword.SecretText | ConvertTo-SecureString -AsPlainText -Force
         $Output = [ordered]@{
             Credential       = [System.Management.Automation.PSCredential]::new($Application.AppId, $SecretSecureString)
@@ -430,6 +424,12 @@ function New-PartnerWebApp {
             $Output['Tenant'] = $Tenant
         }
         [PSCustomObject]$Output
+    }
+    else {
+        [PSCustomObject][ordered]@{
+            ApplicationPassword = $ApplicationPassword
+            Application         = $Application
+        } | Format-Output -OutputFormat $OutputFormat
     }
 }
 
@@ -509,7 +509,7 @@ function Connect-PartnerCenter {
         $null
     )
     $Script:PartnerOperations = [Microsoft.Store.PartnerCenter.PartnerService]::Instance.CreatePartnerOperations($PartnerCredentials)
-    Return $Script:PartnerOperations
+    $Script:PartnerOperations
 }
 
 function Get-PartnerOrganizationProfile {
@@ -520,6 +520,9 @@ function Get-PartnerOrganizationProfile {
     [CmdletBinding()]
     [OutputType('Microsoft.Store.PartnerCenter.Models.Partners.OrganizationProfile')]
     param (
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes', 'Compatibility')]
+        [string]$OutputFormat = 'Raw',
+
         # Return Task instead of result to support fast parallel execution.
         [switch]$Async,
 
@@ -528,7 +531,23 @@ function Get-PartnerOrganizationProfile {
     )
     $Get = $Async ? 'GetAsync' : 'Get'
 
-    Return $PartnerOperations.Profiles.OrganizationProfile.$Get()
+    $OutputRaw = $PartnerOperations.Profiles.OrganizationProfile.$Get()
+
+    if ($OutputFormat -eq 'Compatibility') {
+        [PSCustomObject][ordered]@{
+            Id             = $OutputRaw.Id
+            CompanyName    = $OutputRaw.CompanyName
+            DefaultAddress = $OutputRaw.DefaultAddress
+            TenantId       = $OutputRaw.TenantId
+            Domain         = $OutputRaw.Domain
+            Email          = $OutputRaw.Email
+            Language       = $OutputRaw.Language
+            Culture        = $OutputRaw.Culture
+        }
+    }
+    else {
+        $OutputRaw | Format-Output -OutputFormat $OutputFormat
+    }
 }
 
 function Get-PartnerOrganizationProfileRestExample {
@@ -571,6 +590,9 @@ function Get-PartnerCustomer {
         [Parameter(ParameterSetName = 'IndirectReseller', Mandatory)]
         [String]$IndirectResellerId,
 
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
         # Return Task instead of result to support fast parallel execution.
         [switch]$Async,
 
@@ -582,7 +604,7 @@ function Get-PartnerCustomer {
         $CustomerId = $InputObject.Id
     }
 
-    if ($IndirectResellerId) {
+    $OutputRaw = if ($IndirectResellerId) {
         # Create a filter.
         $Filter = [Microsoft.Store.PartnerCenter.Models.Query.SimpleFieldFilter]::new(
             [Microsoft.Store.PartnerCenter.Models.Customers.CustomerSearchField]::IndirectReseller.ToString(),
@@ -624,6 +646,7 @@ function Get-PartnerCustomer {
             $CustomersEnumerator.Next()
         }
     }
+    $OutputRaw | Format-Output -OutputFormat $OutputFormat
 }
 
 function Get-PartnerCustomerRestExample {
@@ -690,6 +713,9 @@ function Get-PartnerCustomerSubscription {
         # $MpnId
         # $SubscriptionId
 
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
         # Return Task instead of result to support fast parallel execution.
         [switch]$Async,
 
@@ -701,7 +727,7 @@ function Get-PartnerCustomerSubscription {
         $CustomerId = $InputObject.Id
     }
 
-    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.$Get().Items
+    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.$Get().Items | Format-Output -OutputFormat $OutputFormat
 }
 
 function Get-PartnerIndirectReseller {
@@ -720,6 +746,9 @@ function Get-PartnerIndirectReseller {
         [Parameter(ParameterSetName = 'CustomerId', Mandatory)]
         [string]$CustomerId,
 
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
         # Return Task instead of result to support fast parallel execution.
         [switch]$Async,
 
@@ -731,10 +760,121 @@ function Get-PartnerIndirectReseller {
         $CustomerId = $InputObject.Id
     }
 
-    if ($CustomerId) {
+    $OutputRaw = if ($CustomerId) {
         $PartnerOperations.Customers.ById($CustomerId).Relationships.$Get().Items
     }
     else {
         $PartnerOperations.Relationships.$Get([Relationships.PartnerRelationshipType]::IsIndirectCloudSolutionProviderOf).Items
+    }
+    $OutputRaw | Format-Output -OutputFormat $OutputFormat
+}
+
+function Format-Output {
+    [CmdletBinding()]
+    param (
+        [Parameter(ValueFromPipeline)]
+        $InputObject,
+        $OutputFormat
+    )
+    process {
+        if ($OutputFormat -eq 'Raw') {
+            $InputObject
+        }
+        elseif ($OutputFormat -eq 'FlatAutoFull') {
+            $InputObject | Get-Flattened
+        }
+        elseif ($OutputFormat -eq 'FlatAutoNoLinksAttributes') {
+            $InputObject | Get-Flattened -Filter 'Links', 'Attributes'
+        }
+        else {
+            throw "Unhandled output format: $OutputFormat."
+        }
+    }
+}
+
+function Get-Flattened {
+    [CmdletBinding()]
+    param (
+        [Parameter(ValueFromPipeline)]
+        $InputObject,
+        $ObjectType,
+        $Prefix,
+        [string[]]$Filter = @(),
+        $_Output
+    )
+    process {
+        $ObjectType ??= $InputObject.GetType()
+        if ($null -eq $_Output) {
+            $Output = [ordered]@{}
+            $First = $true
+        }
+        else {
+            $First = $false
+        }
+
+        if ($ObjectType -eq [System.Management.Automation.PSCustomObject]) {
+            foreach ($Property in $InputObject.PSObject.Properties) {
+                $PropertyPrefix = ($Prefix, $Property.Name | Join-String -Separator '_')
+                $PropertyType = $InputObject.($Property.Name)?.GetType()
+                if ($null -eq $PropertyType) {
+                    throw "PSCustomObject property ""$($Property.Name)"" is null, cannot flatten reliably."
+                }
+                if ($PropertyType.IsValueType -or $PropertyType -in [string], [DateTime], [System.Uri]) {
+                    $Output[$PropertyPrefix] = $InputObject.($Property.Name)
+                }
+                else {
+                    Get-Flattened -InputObject $InputObject.($Property.Name) -ObjectType $PropertyType -Prefix $PropertyPrefix -Filter $Filter -_Output $Output
+                }
+            }
+        }
+        else {
+            foreach ($Property in $ObjectType.GetProperties()) {
+                if ($Property.Name -in $Filter) {
+                    continue
+                }
+                $PropertyPrefix = ($Prefix, $Property.Name | Join-String -Separator '_')
+                if ($Property.PropertyType.IsValueType -or $Property.PropertyType -in [string], [DateTime], [System.Uri]) {
+                    $Output[$PropertyPrefix] = $InputObject.($Property.Name)
+                    continue
+                }
+                if ($Property.PropertyType.ImplementedInterfaces -contains [System.Collections.IEnumerable]) {
+                    if ($Property.PropertyType.GenericTypeArguments.Count -eq 1) {
+                        $SubType = $Property.PropertyType.GenericTypeArguments[0]
+                    }
+                    elseif ($Property.PropertyType.GenericTypeArguments.Count -gt 1) {
+                        throw 'multiple sub types?'
+                    }
+                    elseif ($Property.PropertyType.FullName -like '*[[]]' -and ($SubType = $Property.PropertyType.FullName.Trim('[]') -as [type])) {
+                    }
+                    else {
+                        throw 'unexpected sub types?'
+                    }
+                    if ($SubType.IsValueType -or $SubType -in [string], [DateTime], [System.Uri]) {
+                        $Output[$PropertyPrefix] = $InputObject.($Property.Name) -join ', '
+                        continue
+                    }
+                    else {
+                        Get-Flattened -InputObject $InputObject.($Property.Name) -ObjectType $SubType -Prefix $PropertyPrefix -Filter $Filter -_Output $Output
+                    }
+                }
+                else {
+                    if ($Property.PropertyType -eq $ObjectType) {
+                        if ($null -eq $InputObject.($Property.Name)) {
+                            $Output[$PropertyPrefix] = $null
+                        }
+                        else {
+                            throw 'recursive?'
+                            # $Output[$PropertyPrefix] = $InputObject.($Property.Name)
+                        }
+                    }
+                    else {
+                        Get-Flattened -InputObject $InputObject.($Property.Name) -ObjectType $Property.PropertyType -Prefix $PropertyPrefix -Filter $Filter -_Output $Output
+                    }
+                }
+            }
+        }
+        if ($First) {
+            [PSCustomObject]$Output
+        }
     }
 }

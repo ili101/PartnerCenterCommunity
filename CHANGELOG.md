@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* `-OutputFormat` added to CmdLets with new `FlatAutoFull`, `FlatAutoNoLinksAttributes` and example of `Compatibility`.
 * Add missing dependency `[Microsoft.IdentityModel.Abstractions]`.
 * `Microsoft.Identity.Client.dll` load implicitly if needed as a dependency.
 * Dll updater helper `Updater.ps1`.
