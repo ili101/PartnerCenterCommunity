@@ -85,14 +85,16 @@ https://github.com/ili101/PartnerCustomerCommunity/blob/master/README.md
         'New-PartnerRefreshToken',
         'New-PartnerAccessToken',
         'Connect-PartnerCenter',
+        # 'Set-PartnerCenterConnection',
 
         'Get-PartnerOrganizationProfile',
         'Get-PartnerCustomer',
         'Get-PartnerCustomerSubscription',
         'Get-PartnerIndirectReseller',
         'Get-PartnerCustomerOrder',
-        'Get-TransitionEligibilities',
-        'New-Transition'
+        'Get-PartnerTransitionEligibilities',
+        'New-PartnerTransition',
+        'Get-PartnerTransition'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

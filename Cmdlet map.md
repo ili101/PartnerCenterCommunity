@@ -133,7 +133,7 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | Async             | 🆕⚙️                |
 | PartnerOperations | 🆕⚙️                |
 
-### 🆕 Get-TransitionEligibilities
+### 🆕 Get-PartnerTransitionEligibilities
 | Param             | Status |
 | ----------------- | ------ |
 | CustomerId        | 🆕     |
@@ -143,7 +143,7 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | Async             | 🆕⚙️ |
 | PartnerOperations | 🆕⚙️ |
 
-### 🆕 New-Transition
+### 🆕 New-PartnerTransition
 | Param             | Status |
 | ----------------- | ------ |
 | CustomerId        | 🆕     |
@@ -154,6 +154,15 @@ Currently only support [App + User authentication](https://docs.microsoft.com/en
 | TermDuration      | 🆕     |
 | BillingCycle      | 🆕     |
 | TransitionType    | 🆕     |
+| OutputFormat      | 🆕⚙️ |
+| Async             | 🆕⚙️ |
+| PartnerOperations | 🆕⚙️ |
+
+### Get-PartnerTransition
+| Param             | Status |
+| ----------------- | ------ |
+| CustomerId        | 🆕     |
+| SubscriptionId    | 🆕     |
 | OutputFormat      | 🆕⚙️ |
 | Async             | 🆕⚙️ |
 | PartnerOperations | 🆕⚙️ |

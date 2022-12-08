@@ -16,7 +16,7 @@ Make it easy and inviting to anyone that wants to contribute by fixing or adding
 * Optional async support to support faster parallel execution.
 * New CmdLet `New-PartnerWebApp`.
 * Now parameter `Connect-PartnerCenter -RefreshTokenScript <ScriptBlock>`.
-* New CmdLets for NCE transition: `Get-TransitionEligibilities` and `New-Transition`.
+* New CmdLets for NCE transition: `Get-PartnerTransitionEligibilities`, `New-PartnerTransition` and `Get-PartnerTransition`.
 
 ## Design choices
 #### Language
@@ -43,8 +43,9 @@ I think that we should go with the PowerShell + dlls approach, it requires only 
 * `Get-PartnerCustomerSubscription`
 * `Get-PartnerIndirectReseller`
 * `Get-PartnerCustomerOrder`
-* `Get-TransitionEligibilities` 🆕
-* `New-Transition` 🆕
+* `Get-PartnerTransitionEligibilities` 🆕
+* `New-PartnerTransition` 🆕
+* `Get-PartnerTransition` 🆕
 
 More info [Cmdlet map.md](Cmdlet%20map.md)
 

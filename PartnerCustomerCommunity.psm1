@@ -511,6 +511,20 @@ function Connect-PartnerCenter {
     $Script:PartnerOperations = [Microsoft.Store.PartnerCenter.PartnerService]::Instance.CreatePartnerOperations($PartnerCredentials)
     $Script:PartnerOperations
 }
+# # Wait for multithreading support https://github.com/PowerShell/PowerShell/pull/18138
+# function Set-PartnerCenterConnection {
+#     <#
+#         .OUTPUTS
+#         Set a PartnerOperations object as the default connection.
+#     #>
+#     [CmdletBinding()]
+#     [OutputType('Microsoft.Store.PartnerCenter.AggregatePartnerOperations')]
+#     param (
+#         [Parameter(Mandatory)]
+#         $PartnerOperations
+#     )
+#     $Script:PartnerOperations = $PartnerOperations
+# }
 
 function Get-PartnerOrganizationProfile {
     <#
@@ -931,7 +945,7 @@ function Get-PartnerCustomerOrder {
     $OutputRaw | Format-Output -OutputFormat $OutputFormat
 }
 
-function Get-TransitionEligibilities {
+function Get-PartnerTransitionEligibilities {
     <#
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/transition-a-new-commerce-subscription
@@ -963,7 +977,7 @@ function Get-TransitionEligibilities {
     $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).TransitionEligibilities.$Get($EligibilityType).Items | Format-Output -OutputFormat $OutputFormat
 }
 
-function New-Transition {
+function New-PartnerTransition {
     <#
         .NOTES
         https://docs.microsoft.com/en-us/partner-center/develop/transition-a-new-commerce-subscription
@@ -1022,4 +1036,32 @@ function New-Transition {
     $Transition.BillingCycle = $BillingCycle
 
     $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).Transitions.$Create($Transition) | Format-Output -OutputFormat $OutputFormat
+}
+
+function Get-PartnerTransition {
+    <#
+        .NOTES
+        https://docs.microsoft.com/en-us/partner-center/develop/transition-a-new-commerce-subscription
+    #>
+    param (
+        # Customer tenant ID.
+        [Parameter(Mandatory)]
+        [string]$CustomerId,
+
+        # Customer Subscription ID.
+        [Parameter(Mandatory)]
+        [string]$SubscriptionId,
+
+        [ValidateSet('Raw', 'FlatAutoFull', 'FlatAutoNoLinksAttributes')]
+        [string]$OutputFormat = 'Raw',
+
+        # Return Task instead of result to support fast parallel execution.
+        [switch]$Async,
+
+        # PartnerOperations session, if not provided last generated one will be automatically used.
+        $PartnerOperations = $Script:PartnerOperations
+    )
+    $Get = $Async ? 'GetAsync' : 'Get'
+
+    $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).Transitions.$Get() | Format-Output -OutputFormat $OutputFormat
 }

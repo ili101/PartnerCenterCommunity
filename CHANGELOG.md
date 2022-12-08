@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha] - 2022-12-08
+### Changed
+* Rename `Get-TransitionEligibilities` to `Get-PartnerTransitionEligibilities`.
+* Rename `New-Transition` to `New-PartnerTransition`.
+### Added
+* `Get-PartnerTransition`.
+
 ## [0.0.3-alpha] - 2022-09-13
 ### Added
 * `Get-PartnerCustomerOrder`.
