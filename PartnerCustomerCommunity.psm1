@@ -181,11 +181,13 @@ function New-PartnerRefreshToken {
     }
     elseif ($AuthenticationFlow -eq 'OIDC') {
         $Module = 'Pode'
-        if (!(Get-Module -Name $Module -ListAvailable)) {
+        if (!((Get-Module -Name $Module -ListAvailable) -or (Get-Module -Name $Module))) {
             Install-Module $Module
         }
+        $PodeModule = (Get-Module -Name $Module).Path
 
         $PodeJob = Start-Job {
+            Import-Module $using:PodeModule
             $UsedPorts = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue
             $Port = [Linq.Enumerable]::First([Linq.Enumerable]::Except([Linq.Enumerable]::Range(8400, 600), [int[]]$UsedPorts.LocalPort))
             @{ Port = $Port }
