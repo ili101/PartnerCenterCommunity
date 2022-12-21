@@ -1,4 +1,4 @@
-#Requires -Modules PartnerCustomerCommunity
+#Requires -Modules PartnerCenterCommunity
 # Import-Module .\ -Force
 # Import-Module ..\ -Force
 

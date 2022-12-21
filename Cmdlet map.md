@@ -1,6 +1,6 @@
-❌ Exist in old module but not on `PartnerCustomerCommunity` (unneeded, replaced or not implemented yet).<br>
+❌ Exist in old module but not on `PartnerCenterCommunity` (unneeded, replaced or not implemented yet).<br>
 ✔️ Exist in both modules.<br>
-🆕 New parameter/functionality in `PartnerCustomerCommunity` that was not in old module.<br>
+🆕 New parameter/functionality in `PartnerCenterCommunity` that was not in old module.<br>
 🔃 New replacement/renamed.
 
 ### 🆕 New-PartnerWebApp

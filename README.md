@@ -1,4 +1,4 @@
-# PartnerCustomerCommunity
+# PartnerCenterCommunity
 This is an open source Powershell module for Microsoft Partner Center.
 
 ## Motivation
