@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+* `Get-PartnerCustomerCustomDomains`, `(Get-PartnerCustomer).CustomDomains` sometime missing some domains.
+
 ## [0.1.1-alpha] - 2022-12-21
 ### Changed
 * Rename module from "PartnerCustomerCommunity" to "PartnerCenterCommunity".

@@ -81,6 +81,9 @@ https://github.com/ili101/PartnerCenterCommunity/blob/master/README.md
         'Get-PartnerCustomerRestExample',
         'Get-PartnerOrganizationProfileRestExample',
 
+        # Raw REST, no SDK available:
+        'Get-PartnerCustomerCustomDomains'
+
         'New-PartnerWebApp',
         'New-PartnerRefreshToken',
         'New-PartnerAccessToken',

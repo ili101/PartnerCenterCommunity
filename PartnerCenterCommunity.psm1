@@ -1067,3 +1067,39 @@ function Get-PartnerTransition {
 
     $PartnerOperations.Customers.ById($CustomerId).Subscriptions.ById($SubscriptionId).Transitions.$Get() | Format-Output -OutputFormat $OutputFormat
 }
+
+function Get-PartnerCustomerCustomDomains {
+    <#
+        .NOTES
+        https://learn.microsoft.com/en-us/partner-center/developer/get-customer-custom-domain
+    #>
+    [OutputType([string[]])]
+    param (
+        # Customer object.
+        [Parameter(ParameterSetName = 'PipeLine', Mandatory, ValueFromPipeLine)]
+        $InputObject,
+
+        # Customer tenant ID.
+        [Parameter(ParameterSetName = 'CustomerId', Mandatory)]
+        [string]$CustomerId,
+
+        # PartnerOperations session, if not provided last generated one will be automatically used.
+        $PartnerOperations = $Script:PartnerOperations
+    )
+    if ($InputObject) {
+        $CustomerId = $InputObject.Id
+    }
+
+    # Send any request to update token if needed.
+    Get-PartnerOrganizationProfile -PartnerOperations $PartnerOperations | Out-Null
+    $AccessToken = $PartnerOperations.Credentials.PartnerServiceToken
+
+    $ContentType = [System.Net.Mime.MediaTypeNames+Application]::Json, ('charset={0}' -f [System.Text.Encoding]::UTF8.WebName) -join ';'
+    $Response = Invoke-RestMethod -ContentType $ContentType -Uri "https://api.partnercenter.microsoft.com/v1/customers/$CustomerId/customDomains" -Headers @{
+        "Authorization"    = "Bearer " + $AccessToken
+        'Accept'           = [System.Net.Mime.MediaTypeNames+Application]::Json, ('charset={0}' -f ([System.Text.Encoding]::UTF8).WebName) -join ';'
+        'MS-RequestId'     = 'b85cb7ab-cc2e-4966-93f0-cf0d8377a93f'
+        'MS-CorrelationId' = '1bb03149-88d2-4bc2-9cc1-d6e83890fa9e'
+    }
+    $Response
+}
